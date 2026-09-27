@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- IBI-PWA-KIT: installable app (manifest + icons + service worker) -->
+<link rel="manifest" href="manifest.json" crossorigin="use-credentials">
+<meta name="theme-color" content="#000000">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="apple-mobile-web-app-title" content="IBI Player">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<script>if('serviceWorker' in navigator)window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){});});</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>IBI Media Player</title>
+<meta name="description" content="IBI Media Player — plays your audio and video files in the browser at any speed from 0.25× to 4×, with a playlist, captions, picture-in-picture and keyboard control. India Business International.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="IBI Media Player">
+<meta property="og:description" content="Play audio and video files at any speed from 0.25× to 4×, with a playlist, captions and keyboard control.">
+<meta property="og:url" content="https://player.indiabusinessinternational.online/">
+<meta property="og:image" content="https://player.indiabusinessinternational.online/og-banner.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:site_name" content="India Business International">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="IBI Media Player">
+<meta name="twitter:description" content="Play audio and video files at any speed from 0.25× to 4×, with a playlist, captions and keyboard control.">
+<meta name="twitter:image" content="https://player.indiabusinessinternational.online/og-banner.png">
+<meta name="color-scheme" content="dark light">
+<link rel="icon" href="icons/favicon-64.png" sizes="64x64">
+<link rel="stylesheet" href="styles.css?v=1.0.0">
+</head>
+<body>
+<header class="top">
+  <div class="logo" aria-hidden="true">▶</div>
+  <h1>IBI Media Player</h1>
+  <span class="badge" id="version-badge">v1.0.0</span>
+  <span class="now" id="now-playing"></span>
+  <button type="button" class="theme" id="theme-btn" aria-label="Switch light or dark" title="Light / dark">☾</button>
+</header>
+<main class="wrap"><div id="player"></div></main>
+<footer class="foot">Space play · J/L ±10 s · ←/→ ±5 s · ↑/↓ volume · M mute · F full screen · C captions · &lt; &gt; speed · , . frame · 0–9 seek · N/P next/previous · I picture-in-picture · R repeat</footer>
+<script src="app.js?v=1.0.0"></script>
+<script>
+(function () {
+  // Theme: follow the device, remember a manual choice.
+  var root = document.documentElement, btn = document.getElementById("theme-btn");
+  function cur() { return root.getAttribute("data-theme") || (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark"); }
+  function paint() { btn.textContent = cur() === "dark" ? "☀" : "☾"; }
+  try { var saved = localStorage.getItem("ibp:theme"); if (saved) root.setAttribute("data-theme", saved); } catch (e) {}
+  btn.addEventListener("click", function () { var n = cur() === "dark" ? "light" : "dark"; root.setAttribute("data-theme", n); try { localStorage.setItem("ibp:theme", n); } catch (e) {} paint(); });
+  paint();
+
+  // ?src=<url>&title=<name> opens a file straight away (a share link or the Grower's library).
+  var q = new URLSearchParams(location.search), items = [];
+  q.getAll("src").forEach(function (u, i) { if (u) items.push({ url: u, title: q.getAll("title")[i] || "" }); });
+  var np = document.getElementById("now-playing");
+  window.player = IBIPlayer.mount(document.getElementById("player"), {
+    items: items, autoplay: false, title: "IBI Media Player",
+    onTitle: function (t) { np.textContent = t || ""; document.title = t ? t + " — IBI Media Player" : "IBI Media Player"; },
+  });
+})();
+</script>
+</body>
+</html>
