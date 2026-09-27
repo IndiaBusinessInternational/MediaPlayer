@@ -1,4 +1,6 @@
-# IBI Media Player v1.1.1
+# IBI Media Player v1.1.2
+
+**Light-theme buttons (v1.1.2)** — 27 Sep 2026: inside the Read-aloud and Speed menus and the playlist header, the secondary buttons (Pause, Stop, Open .txt, Set as default, Open, Folder, Captions, Clear) were white on white in the light theme; they now take the theme's text and card colours.
 
 **Default voice + gender labels (v1.1.1)** — 27 Sep 2026: Google's "US English" (female, online) is the built-in default voice wherever the device has it (the CEO's choice; a saved Set-as-default still wins), and a voice's gender is read from the word in its name first ("UK English Female" was labelled Male).
 
