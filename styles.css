@@ -100,6 +100,19 @@ button { font: inherit; color: inherit; }
 .ibp-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--mut); min-height: 32px; }
 .ibp-check input { width: 18px; height: 18px; accent-color: var(--ibp-accent); }
 
+/* -------------------------------- read aloud ------------------------------- */
+.ibp-readmenu { width: min(440px, calc(100% - 20px)); }
+.ibp-readtext { width: 100%; min-height: 96px; max-height: 40dvh; resize: vertical; font: inherit; font-size: 15px; color: var(--txt); background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.ibp-read-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.ibp-read-lab { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--mut); flex: 1; min-width: 0; }
+.ibp-voices { flex: 1; min-width: 0; min-height: 40px; font: inherit; font-size: 14px; color: var(--txt); background: var(--card2); border: 1px solid var(--line); border-radius: 9px; padding: 0 8px; }
+.ibp-read-rate b { color: var(--txt); min-width: 44px; }
+.ibp-readrate { flex: 1; min-width: 0; accent-color: var(--ibp-accent); height: 40px; margin: 0; }
+.ibp-read-btns .ibp-btn { display: inline-flex; align-items: center; gap: 6px; }
+.ibp-read-btns .ibp-btn svg { width: 18px; height: 18px; fill: currentColor; }
+.ibp-read-hint { margin-top: 8px; font-size: 13px; color: var(--mut); min-height: 18px; }
+.ibp-reading .ibp-readbtn { color: var(--ibp-accent); }
+
 /* -------------------------------- playlist -------------------------------- */
 .ibp-list { grid-row: 2; background: var(--card); color: var(--txt); border-top: 1px solid var(--line); display: none; flex-direction: column; min-height: 0; max-height: 45dvh; }
 .ibp-list.ibp-list-open { display: flex; }

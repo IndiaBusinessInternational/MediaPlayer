@@ -1,4 +1,6 @@
-# IBI Media Player v1.0.1
+# IBI Media Player v1.1.0
+
+**Read text aloud, in any voice on the device (v1.1.0)** — 27 Sep 2026, CEO: "provide as many voices as possible both female and male voices so that we can select, also set a default voice". A 🗣 button opens a panel: paste text or open a .txt, choose a voice from every voice the browser offers (grouped India / English / other, gender shown where the name tells), speed 0.5×–3×, Read / Pause / Stop, and Set as default (remembered as `ibp:voice`). Reading pauses the media; playing media stops the reading.
 
 **Install button (v1.0.1)** — 27 Sep 2026: an Install button in the header appears whenever Chrome can install the app right there. Opened from another installed app, the page lands in a Chrome Custom Tab, which can never install; the fix is ⋮ → Open in Chrome first.
 

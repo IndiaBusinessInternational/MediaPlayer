@@ -28,20 +28,20 @@
 <meta name="twitter:image" content="https://player.indiabusinessinternational.online/og-banner.png">
 <meta name="color-scheme" content="dark light">
 <link rel="icon" href="icons/favicon-64.png" sizes="64x64">
-<link rel="stylesheet" href="styles.css?v=1.0.1">
+<link rel="stylesheet" href="styles.css?v=1.1.0">
 </head>
 <body>
 <header class="top">
   <div class="logo" aria-hidden="true">▶</div>
   <h1>IBI Media Player</h1>
-  <span class="badge" id="version-badge">v1.0.1</span>
+  <span class="badge" id="version-badge">v1.1.0</span>
   <span class="now" id="now-playing"></span>
   <button type="button" class="install" id="install-btn" hidden>Install</button>
   <button type="button" class="theme" id="theme-btn" aria-label="Switch light or dark" title="Light / dark">☾</button>
 </header>
 <main class="wrap"><div id="player"></div></main>
 <footer class="foot">Space play · J/L ±10 s · ←/→ ±5 s · ↑/↓ volume · M mute · F full screen · C captions · &lt; &gt; speed · , . frame · 0–9 seek · N/P next/previous · I picture-in-picture · R repeat</footer>
-<script src="app.js?v=1.0.1"></script>
+<script src="app.js?v=1.1.0"></script>
 <script>
 (function () {
   // Theme: follow the device, remember a manual choice.
@@ -52,7 +52,7 @@
   btn.addEventListener("click", function () { var n = cur() === "dark" ? "light" : "dark"; root.setAttribute("data-theme", n); try { localStorage.setItem("ibp:theme", n); } catch (e) {} paint(); });
   paint();
 
-  // Install button (v1.0.1): Chrome hands us its install prompt; a Custom Tab or an already-installed
+  // Install button (v1.1.0): Chrome hands us its install prompt; a Custom Tab or an already-installed
   // app never fires it, so the button shows only when installing is actually possible right here.
   var installBtn = document.getElementById("install-btn"), deferred = null;
   window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); deferred = e; installBtn.hidden = false; });

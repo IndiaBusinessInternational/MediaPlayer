@@ -80,6 +80,7 @@
     trash: '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7zm3-4h6l1 2h4v2H4V5h4z"/></svg>',
     music: '<svg viewBox="0 0 24 24"><path d="M12 3v10.6A4 4 0 1 0 14 17V7h4V3z"/></svg>',
     film: '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zm2 2v2h2V6zm0 4v2h2v-2zm0 4v2h2v-2zm10-8v2h2V6zm0 4v2h2v-2zm0 4v2h2v-2zM10 6v12h4V6z"/></svg>',
+    read: '<svg viewBox="0 0 24 24"><path d="M4 5h11v2H4zm0 4h11v2H4zm0 4h7v2H4zm0 4h7v2H4zm13.5-6a4.5 4.5 0 0 1 0 6.4l-1.4-1.4a2.5 2.5 0 0 0 0-3.6zm2.8-2.8a8.5 8.5 0 0 1 0 12l-1.4-1.4a6.5 6.5 0 0 0 0-9.2z"/></svg>',
   };
 
   function mount(root, options) {
@@ -123,6 +124,7 @@
               <button type="button" class="ibp-ic ibp-pipbtn" data-act="pip" aria-label="Picture in picture (I)" title="Picture in picture (I)">${ICON.pip}</button>
               <button type="button" class="ibp-ic" data-act="shuffle" aria-label="Shuffle" title="Shuffle">${ICON.shuffle}</button>
               <button type="button" class="ibp-ic ibp-repeatbtn" data-act="repeat" aria-label="Repeat (R)" title="Repeat (R)">${ICON.repeat}</button>
+              <button type="button" class="ibp-ic ibp-readbtn" data-act="read" aria-haspopup="dialog" aria-label="Read text aloud" title="Read text aloud (choose a voice)">${ICON.read}</button>
               <button type="button" class="ibp-ic" data-act="list" aria-label="Playlist" title="Playlist">${ICON.list}</button>
               ${o.showOpen ? `<button type="button" class="ibp-ic" data-act="open" aria-label="Open files" title="Open files">${ICON.open}</button>` : ""}
               <button type="button" class="ibp-ic" data-act="full" aria-label="Full screen (F)" title="Full screen (F)">${ICON.full}</button>
@@ -139,6 +141,24 @@
           </div>
           <label class="ibp-check"><input type="checkbox" class="ibp-pitch" checked> Keep the voice's pitch at every speed</label>
         </div>
+        <div class="ibp-menu ibp-readmenu" hidden role="dialog" aria-label="Read text aloud">
+          <div class="ibp-menu-h">Read text aloud <button type="button" class="ibp-ic ibp-sm" data-act="closeread" aria-label="Close">${ICON.close}</button></div>
+          <textarea class="ibp-readtext" rows="4" placeholder="Paste or type the text to read, or open a .txt file"></textarea>
+          <div class="ibp-read-row">
+            <label class="ibp-read-lab">Voice <select class="ibp-voices" aria-label="Voice"></select></label>
+          </div>
+          <div class="ibp-read-row">
+            <label class="ibp-read-lab ibp-read-rate">Speed <b class="ibp-read-rateval">1×</b><input type="range" class="ibp-readrate" min="0.5" max="3" step="0.05" value="1" aria-label="Reading speed"></label>
+          </div>
+          <div class="ibp-read-row ibp-read-btns">
+            <button type="button" class="ibp-btn ibp-btn-primary ibp-sm" data-act="readplay">${ICON.play} Read</button>
+            <button type="button" class="ibp-btn ibp-sm" data-act="readpause">Pause</button>
+            <button type="button" class="ibp-btn ibp-sm" data-act="readstop">Stop</button>
+            <button type="button" class="ibp-btn ibp-sm" data-act="open-txt">Open .txt</button>
+            <button type="button" class="ibp-btn ibp-sm" data-act="voicedefault" title="Use the chosen voice every time">Set as default</button>
+          </div>
+          <div class="ibp-read-hint"></div>
+        </div>
       </div>
       <aside class="ibp-list" aria-label="Playlist">
         <div class="ibp-list-h"><span class="ibp-list-title">Playlist</span><span class="ibp-list-count"></span>
@@ -148,7 +168,8 @@
       </aside>
       <input type="file" class="ibp-file" multiple hidden accept="${o.accept || [...VIDEO_EXT, ...AUDIO_EXT, ...CAPTION_EXT].map((e) => "." + e).join(",") + ",video/*,audio/*"}">
       <input type="file" class="ibp-folder" multiple hidden webkitdirectory>
-      <input type="file" class="ibp-ccfile" hidden accept=".vtt,.srt,text/vtt">`;
+      <input type="file" class="ibp-ccfile" hidden accept=".vtt,.srt,text/vtt">
+      <input type="file" class="ibp-txtfile" hidden accept=".txt,.md,text/plain">`;
 
     const $ = (s) => root.querySelector(s);
     const $$ = (s) => Array.from(root.querySelectorAll(s));
@@ -329,8 +350,55 @@
     function next() { const j = nextIndex(1); if (j >= 0) load(j, true); else { video.pause(); } }
     function prev() { if (video.currentTime > 3) { video.currentTime = 0; return; } const j = nextIndex(-1); if (j >= 0) load(j, true); }
 
+    /* -------------------------------- read aloud -------------------------------- */
+    /* v1.1.0 (CEO, 27 Sep 2026: "provide as many voices as possible, both female and male, so
+     * that we can select, also set a default voice"). The browser's own speech engine reads
+     * any text in any voice the device offers — Windows ships Microsoft voices, Android ships
+     * Google voices in Indian English and other languages, and Edge adds its online voices.
+     * The chosen voice is remembered as the default (ibp:voice). Rate 0.5×–3× on the same
+     * scale as the player; the engine itself clamps what it cannot do. */
+    const readMenu = $(".ibp-readmenu"), readText = $(".ibp-readtext"), voiceSel = $(".ibp-voices"), readRate = $(".ibp-readrate"), readRateVal = $(".ibp-read-rateval"), readHint = $(".ibp-read-hint"), txtIn = $(".ibp-txtfile");
+    const synth = window.speechSynthesis;
+    let voices = [], utter = null;
+    const FEMALE_RE = /female|woman|zira|hazel|heera|neerja|swara|pallavi|kavya|aashi|ananya|jenny|aria|ava|emma|sonia|libby|natasha|luna|samantha|karen|moira|tessa|veena|fiona|susan|catherine|serena|ayanda|leila|priya|vidya|sunita|salli|joanna|kimberly|ivy|nicole|raveena|aditi|kajal|google uk english female|google us english/i;
+    const MALE_RE = /male|man\b|david|mark|george|james|prabhat|madhur|valluvar|kunal|rehaan|arjun|guy|andrew|christopher|brian|eric|roger|steffan|ryan|thomas|william|wayne|connor|liam|daniel|alex|fred|rishi|arthur|oliver|ravi|matthew|joey|justin|brian|google uk english male/i;
+    const genderOf = (v) => FEMALE_RE.test(v.name) && !/male\b(?!.*female)/i.test(v.name) ? "Female" : MALE_RE.test(v.name) ? "Male" : "";
+    function loadVoices() {
+      if (!synth) { readHint.textContent = "This browser has no speech engine."; return; }
+      voices = synth.getVoices().slice().sort((a, b) => {
+        const pa = /^(en-IN|ta-IN|hi-IN)/.test(a.lang) ? 0 : /^en/.test(a.lang) ? 1 : 2, pb = /^(en-IN|ta-IN|hi-IN)/.test(b.lang) ? 0 : /^en/.test(b.lang) ? 1 : 2;
+        return pa - pb || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name);
+      });
+      const saved = LS("ibp:voice") || "";
+      const groups = {};
+      voices.forEach((v, i) => { const g = /^(en-IN|ta-IN|hi-IN)/.test(v.lang) ? "India" : /^en/.test(v.lang) ? "English, other regions" : "Other languages"; (groups[g] = groups[g] || []).push(`<option value="${i}"${v.voiceURI === saved || (!saved && v.default) ? " selected" : ""}>${esc(v.name.replace(/^Microsoft |^Google /, ""))} · ${esc(v.lang)}${genderOf(v) ? " · " + genderOf(v) : ""}${v.localService ? "" : " · online"}</option>`); });
+      voiceSel.innerHTML = Object.entries(groups).map(([g, opts]) => `<optgroup label="${g} (${opts.length})">${opts.join("")}</optgroup>`).join("") || `<option value="">No voices found yet — try again in a moment</option>`;
+      readHint.textContent = voices.length ? `${voices.length} voices on this device. The default is marked; pick another and press Set as default.` : "";
+    }
+    if (synth) { loadVoices(); synth.addEventListener && synth.addEventListener("voiceschanged", loadVoices); setTimeout(loadVoices, 800); }
+    function currentVoice() { const v = voices[Number(voiceSel.value)]; return v || null; }
+    function speak() {
+      if (!synth) return;
+      const text = readText.value.trim();
+      if (!text) { readHint.textContent = "Type or paste some text first, or open a .txt file."; readText.focus(); return; }
+      if (synth.paused && synth.speaking) { synth.resume(); return; }
+      synth.cancel();
+      if (!video.paused) video.pause();
+      utter = new SpeechSynthesisUtterance(text);
+      const v = currentVoice(); if (v) { utter.voice = v; utter.lang = v.lang; }
+      utter.rate = Number(readRate.value) || 1;
+      utter.onstart = () => { root.classList.add("ibp-reading"); readHint.textContent = `Reading with ${v ? v.name.replace(/^Microsoft |^Google /, "") : "the default voice"} at ${fmtRate(utter.rate) === "Normal" ? "1×" : fmtRate(utter.rate)}.`; };
+      utter.onend = utter.onerror = (e) => { root.classList.remove("ibp-reading"); if (e && e.type === "error" && e.error !== "interrupted" && e.error !== "canceled") readHint.textContent = "The voice could not read this: " + e.error; };
+      utter.onboundary = (e) => { if (e.name === "word" && utter) { const done = Math.round(e.charIndex / text.length * 100); readHint.textContent = `Reading… ${done}%`; } };
+      synth.speak(utter);
+    }
+    readRate.addEventListener("input", () => { readRateVal.textContent = fmtRate(Number(readRate.value)) === "Normal" ? "1×" : fmtRate(Number(readRate.value)); if (synth && synth.speaking) { const t = readText.value; const pos = 0; void pos; void t; } });
+    txtIn.addEventListener("change", async () => { const f = txtIn.files[0]; if (f) { readText.value = await f.text(); readHint.textContent = `${f.name} loaded — press Read.`; } txtIn.value = ""; });
+    document.addEventListener("click", (e) => { if (!readMenu.hidden && !e.target.closest(".ibp-readmenu") && !e.target.closest("[data-act=read]")) readMenu.hidden = true; });
+    window.addEventListener("beforeunload", () => { if (synth && synth.speaking) synth.cancel(); });
+
     /* ---------------------------------- events --------------------------------- */
-    video.addEventListener("play", () => { playBtns.forEach((b) => { b.innerHTML = ICON.pause; b.setAttribute("aria-label", "Pause (Space)"); }); root.classList.add("ibp-playing"); scheduleHide(); });
+    video.addEventListener("play", () => { if (synth && synth.speaking) { synth.cancel(); root.classList.remove("ibp-reading"); } playBtns.forEach((b) => { b.innerHTML = ICON.pause; b.setAttribute("aria-label", "Pause (Space)"); }); root.classList.add("ibp-playing"); scheduleHide(); });
     video.addEventListener("pause", () => { playBtns.forEach((b) => { b.innerHTML = ICON.play; b.setAttribute("aria-label", "Play (Space)"); }); root.classList.remove("ibp-playing"); root.classList.remove("ibp-hide"); savePos(); });
     video.addEventListener("ended", () => { savePos(); if (st.repeat !== "one") next(); });
     video.addEventListener("timeupdate", () => { if (!st.dragging) paint(); if (!st.saveTimer) st.saveTimer = setTimeout(() => { st.saveTimer = 0; savePos(); }, 5000); });
@@ -385,6 +453,13 @@
       else if (act === "mute") setMuted(!st.muted);
       else if (act === "speed") toggleMenu(speedMenu);
       else if (act === "closemenu") toggleMenu(speedMenu, false);
+      else if (act === "read") { readMenu.hidden = !readMenu.hidden; if (!readMenu.hidden) { speedMenu.hidden = true; loadVoices(); readText.focus({ preventScroll: true }); } }
+      else if (act === "closeread") readMenu.hidden = true;
+      else if (act === "readplay") speak();
+      else if (act === "readpause") { if (synth && synth.speaking && !synth.paused) { synth.pause(); readHint.textContent = "Paused — press Read to continue."; } }
+      else if (act === "readstop") { if (synth) synth.cancel(); root.classList.remove("ibp-reading"); readHint.textContent = "Stopped."; }
+      else if (act === "open-txt") txtIn.click();
+      else if (act === "voicedefault") { const v = currentVoice(); if (v) { LS("ibp:voice", v.voiceURI); readHint.textContent = `Default voice: ${v.name.replace(/^Microsoft |^Google /, "")}.`; showFlash("Default voice saved"); } }
       else if (act === "cc") toggleCaptions();
       else if (act === "pip") togglePip();
       else if (act === "shuffle") { st.shuffle = !st.shuffle; b.classList.toggle("ibp-on", st.shuffle); showFlash(st.shuffle ? "Shuffle on" : "Shuffle off"); }
