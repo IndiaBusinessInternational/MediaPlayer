@@ -1,4 +1,6 @@
-# IBI Media Player v1.1.0
+# IBI Media Player v1.1.1
+
+**Default voice + gender labels (v1.1.1)** — 27 Sep 2026: Google's "US English" (female, online) is the built-in default voice wherever the device has it (the CEO's choice; a saved Set-as-default still wins), and a voice's gender is read from the word in its name first ("UK English Female" was labelled Male).
 
 **Read text aloud, in any voice on the device (v1.1.0)** — 27 Sep 2026, CEO: "provide as many voices as possible both female and male voices so that we can select, also set a default voice". A 🗣 button opens a panel: paste text or open a .txt, choose a voice from every voice the browser offers (grouped India / English / other, gender shown where the name tells), speed 0.5×–3×, Read / Pause / Stop, and Set as default (remembered as `ibp:voice`). Reading pauses the media; playing media stops the reading.
 

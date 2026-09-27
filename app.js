@@ -362,7 +362,10 @@
     let voices = [], utter = null;
     const FEMALE_RE = /female|woman|zira|hazel|heera|neerja|swara|pallavi|kavya|aashi|ananya|jenny|aria|ava|emma|sonia|libby|natasha|luna|samantha|karen|moira|tessa|veena|fiona|susan|catherine|serena|ayanda|leila|priya|vidya|sunita|salli|joanna|kimberly|ivy|nicole|raveena|aditi|kajal|google uk english female|google us english/i;
     const MALE_RE = /male|man\b|david|mark|george|james|prabhat|madhur|valluvar|kunal|rehaan|arjun|guy|andrew|christopher|brian|eric|roger|steffan|ryan|thomas|william|wayne|connor|liam|daniel|alex|fred|rishi|arthur|oliver|ravi|matthew|joey|justin|brian|google uk english male/i;
-    const genderOf = (v) => FEMALE_RE.test(v.name) && !/male\b(?!.*female)/i.test(v.name) ? "Female" : MALE_RE.test(v.name) ? "Male" : "";
+    // v1.1.1 — the word itself decides first ("UK English Female" was read as Male because "Female" contains "male").
+    const genderOf = (v) => /female|woman/i.test(v.name) ? "Female" : /\bmale\b|\bman\b/i.test(v.name) ? "Male" : FEMALE_RE.test(v.name) ? "Female" : MALE_RE.test(v.name) ? "Male" : "";
+    // v1.1.1 — the CEO's chosen default: Google's "US English" (female, online) wherever the device has it.
+    const PREFERRED_DEFAULT = /^(google )?us english$/i;
     function loadVoices() {
       if (!synth) { readHint.textContent = "This browser has no speech engine."; return; }
       voices = synth.getVoices().slice().sort((a, b) => {
@@ -370,8 +373,9 @@
         return pa - pb || a.lang.localeCompare(b.lang) || a.name.localeCompare(b.name);
       });
       const saved = LS("ibp:voice") || "";
+      const preferred = saved ? voices.find((v) => v.voiceURI === saved) : (voices.find((v) => PREFERRED_DEFAULT.test(v.name)) || voices.find((v) => v.default));
       const groups = {};
-      voices.forEach((v, i) => { const g = /^(en-IN|ta-IN|hi-IN)/.test(v.lang) ? "India" : /^en/.test(v.lang) ? "English, other regions" : "Other languages"; (groups[g] = groups[g] || []).push(`<option value="${i}"${v.voiceURI === saved || (!saved && v.default) ? " selected" : ""}>${esc(v.name.replace(/^Microsoft |^Google /, ""))} · ${esc(v.lang)}${genderOf(v) ? " · " + genderOf(v) : ""}${v.localService ? "" : " · online"}</option>`); });
+      voices.forEach((v, i) => { const g = /^(en-IN|ta-IN|hi-IN)/.test(v.lang) ? "India" : /^en/.test(v.lang) ? "English, other regions" : "Other languages"; (groups[g] = groups[g] || []).push(`<option value="${i}"${v === preferred ? " selected" : ""}>${esc(v.name.replace(/^Microsoft |^Google /, ""))} · ${esc(v.lang)}${genderOf(v) ? " · " + genderOf(v) : ""}${v.localService ? "" : " · online"}</option>`); });
       voiceSel.innerHTML = Object.entries(groups).map(([g, opts]) => `<optgroup label="${g} (${opts.length})">${opts.join("")}</optgroup>`).join("") || `<option value="">No voices found yet — try again in a moment</option>`;
       readHint.textContent = voices.length ? `${voices.length} voices on this device. The default is marked; pick another and press Set as default.` : "";
     }
