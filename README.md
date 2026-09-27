@@ -1,4 +1,6 @@
-# IBI Media Player v1.0.0
+# IBI Media Player v1.0.1
+
+**Install button (v1.0.1)** — 27 Sep 2026: an Install button in the header appears whenever Chrome can install the app right there. Opened from another installed app, the page lands in a Chrome Custom Tab, which can never install; the fix is ⋮ → Open in Chrome first.
 
 **A media player for the browser, built to the standard of YouTube Premium, VLC and Windows Media Player (v1.0.0)** — 27 Sep 2026, CEO: "a new web app similar to Windows Media Player that plays audio and video files of all the current versions or models … audio to run at speeds as per what YouTube Premium has … in between speeds … also the manual movement using cursor … under IBI YouTube Grower, also as a separate web app."
 

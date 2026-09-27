@@ -18,6 +18,8 @@ button { font: inherit; color: inherit; }
 .top .badge { font-size: 12px; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 2px 8px; font-weight: 700; flex: none; }
 .top .now { margin-left: auto; font-size: 14px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .top .theme { flex: none; background: transparent; border: 1px solid var(--line); border-radius: 8px; width: 40px; height: 36px; cursor: pointer; }
+.top .install { flex: none; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; height: 36px; padding: 0 12px; font-weight: 700; cursor: pointer; }
+.top .install[hidden] { display: none; }
 .wrap { height: calc(100dvh - 57px); min-height: 360px; }
 .foot { display: none; }
 
