@@ -1,4 +1,7 @@
-# IBI Media Player v1.1.2
+# IBI Media Player v1.2.0
+
+**Resizable playlist + the player no longer repaints its host (v1.2.0)** — 28 Sep 2026, CEO: "the line separating [the player and the playlist] to be moved flexibly — to the left or to the right, such that we can see clearly in PlayList the date of the video", and "when we click the Player section, the bg becomes white … every section … until we refresh". (1) On a desktop-width screen (≥ 900 px) the line between player and playlist is a divider you drag left or right, like the playlist pane of Windows Media Player or the sidebar of VS Code: 240 px up to 70 % of the player, remembered (`ibp:listW`), arrow keys move it 20 px (Shift 60), Home / End = narrowest / widest, double-click or Enter = the default 340 px. On a phone the playlist sits below the player, so there is no divider. (2) `styles.css` used to carry the standalone page's own `:root` colours, its light theme (which follows Windows' light mode), `body` and `*` rules — loaded inside the Grower they turned the whole Grower white. They now live in `page.css`, loaded only by the standalone page; `styles.css` styles the player component alone and reads the host's `--card`/`--txt`/… with dark fallbacks. (3) The standalone header's theme button is now a real toggle switch — a track and knob labelled **Dark** / **Light** (`role="switch"`), still following the device until you flip it.
+
 
 **Light-theme buttons (v1.1.2)** — 27 Sep 2026: inside the Read-aloud and Speed menus and the playlist header, the secondary buttons (Pause, Stop, Open .txt, Set as default, Open, Folder, Captions, Clear) were white on white in the light theme; they now take the theme's text and card colours.
 

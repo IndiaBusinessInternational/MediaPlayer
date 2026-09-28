@@ -1,0 +1,38 @@
+/* IBI Media Player — the STANDALONE page only (theme, header, layout). The player component's own
+ * styles are in styles.css and never touch the page around it. */
+:root {
+  --bg: #0d0d13; --card: #16161f; --card2: #1d1d29; --line: #ffffff14; --txt: #f2f2f6; --mut: #9a9aa8;
+  --accent: #00c5ff; --accent-ink: #001a24; --ok: #2fbf71; --warn: #f5a623; --ctrl: #0b0b10ee;
+}
+:root[data-theme="light"] { --bg: #f4f6f9; --card: #ffffff; --card2: #eef1f5; --line: #00000014; --txt: #12161c; --mut: #5b6470; --ctrl: #ffffffee; }
+@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6f9; --card: #ffffff; --card2: #eef1f5; --line: #00000014; --txt: #12161c; --mut: #5b6470; --ctrl: #ffffffee; } }
+* { box-sizing: border-box; margin: 0; }
+html, body { height: 100%; }
+body { background: var(--bg); color: var(--txt); font: 16px/1.45 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif; overflow-x: hidden; }
+a { color: var(--accent); }
+button { font: inherit; color: inherit; }
+.top { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
+.top .logo { width: 34px; height: 34px; border-radius: 9px; background: #000; display: grid; place-items: center; color: var(--accent); font-weight: 800; font-size: 13px; letter-spacing: .5px; flex: none; }
+.top h1 { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.top .badge { font-size: 12px; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 2px 8px; font-weight: 700; flex: none; }
+.top .now { margin-left: auto; font-size: 14px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+/* v1.2.0 — a proper toggle switch: a track + knob, knob right and accent-filled = Dark, with the word beside it. */
+.top .theme { flex: none; display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 4px; background: transparent; border: 0; border-radius: 8px; cursor: pointer; color: var(--txt); font-size: 14px; font-weight: 600; }
+.top .theme:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.theme-track { position: relative; width: 44px; height: 24px; border-radius: 999px; background: var(--card2); border: 1px solid var(--line); transition: background .2s; flex: none; }
+.theme-knob { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: var(--mut); transition: transform .2s, background .2s; }
+.theme[aria-checked="true"] .theme-track { background: var(--accent); border-color: transparent; }
+.theme[aria-checked="true"] .theme-knob { transform: translateX(20px); background: #fff; }
+.theme-lab { min-width: 38px; text-align: left; }
+.top .install { flex: none; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; height: 36px; padding: 0 12px; font-weight: 700; cursor: pointer; }
+.top .install[hidden] { display: none; }
+.wrap { height: calc(100dvh - 57px); min-height: 360px; }
+.foot { display: none; }
+@media (min-width: 900px) {
+  .foot { display: block; text-align: center; font-size: 12px; color: var(--mut); padding: 6px; }
+  .wrap { height: calc(100dvh - 57px - 30px); }
+}
+@media (max-width: 480px) {
+  .top { padding: 8px 12px; }
+  .top .now { display: none; }
+}

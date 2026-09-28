@@ -1,30 +1,11 @@
-/* IBI Media Player v1.0.0 — styles. Dark by default, light when the device asks, phone-first (360 px). */
-:root {
-  --bg: #0d0d13; --card: #16161f; --card2: #1d1d29; --line: #ffffff14; --txt: #f2f2f6; --mut: #9a9aa8;
-  --accent: #00c5ff; --accent-ink: #001a24; --ok: #2fbf71; --warn: #f5a623; --ctrl: #0b0b10ee;
-}
-:root[data-theme="light"] { --bg: #f4f6f9; --card: #ffffff; --card2: #eef1f5; --line: #00000014; --txt: #12161c; --mut: #5b6470; --ctrl: #ffffffee; }
-@media (prefers-color-scheme: light) { :root:not([data-theme="dark"]) { --bg: #f4f6f9; --card: #ffffff; --card2: #eef1f5; --line: #00000014; --txt: #12161c; --mut: #5b6470; --ctrl: #ffffffee; } }
-* { box-sizing: border-box; margin: 0; }
-html, body { height: 100%; }
-body { background: var(--bg); color: var(--txt); font: 16px/1.45 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif; overflow-x: hidden; }
-a { color: var(--accent); }
-button { font: inherit; color: inherit; }
-
-/* ------------------------------ page chrome ------------------------------ */
-.top { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--card); }
-.top .logo { width: 34px; height: 34px; border-radius: 9px; background: #000; display: grid; place-items: center; color: var(--accent); font-weight: 800; font-size: 13px; letter-spacing: .5px; flex: none; }
-.top h1 { font-size: 17px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.top .badge { font-size: 12px; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 2px 8px; font-weight: 700; flex: none; }
-.top .now { margin-left: auto; font-size: 14px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.top .theme { flex: none; background: transparent; border: 1px solid var(--line); border-radius: 8px; width: 40px; height: 36px; cursor: pointer; }
-.top .install { flex: none; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 8px; height: 36px; padding: 0 12px; font-weight: 700; cursor: pointer; }
-.top .install[hidden] { display: none; }
-.wrap { height: calc(100dvh - 57px); min-height: 360px; }
-.foot { display: none; }
-
+/* IBI Media Player — the PLAYER COMPONENT's styles, phone-first (360 px). v1.2.0: nothing here styles the page
+ * around the player (no :root, body, * or theme rules — those are in page.css, the standalone page only), so a host
+ * app such as the Grower keeps its own colours. The player reads the host's --card/--txt/… if it has them. */
 /* --------------------------------- player -------------------------------- */
-.ibp { position: relative; display: grid; grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto; height: 100%; min-height: 0; background: #000; color: #fff; overflow: hidden; --ibp-accent: var(--accent); }
+.ibp { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; height: 100%; min-height: 0; background: #000; color: #fff; overflow: hidden; --ibp-accent: var(--accent, #00c5ff); --ibp-accent-ink: var(--accent-ink, #001a24); --ibp-card: var(--card, #16161f); --ibp-card2: var(--card2, #1d1d29); --ibp-line: var(--line, #ffffff14); --ibp-txt: var(--txt, #f2f2f6); --ibp-mut: var(--mut, #9a9aa8); --ibp-ctrl: var(--ctrl, var(--card, #0b0b10ee)); font-family: inherit; line-height: 1.45; }
+.ibp *, .ibp *::before, .ibp *::after { box-sizing: border-box; }
+:where(.ibp) :where(div, span, ol, li, h1, h2, h3, label, p) { margin: 0; }
+:where(.ibp) button { font: inherit; color: inherit; }
 .ibp-main { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .ibp-stage { position: relative; flex: 1 1 auto; min-height: 0; background: #000; outline: none; display: grid; place-items: center; }
 .ibp-stage video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
@@ -46,10 +27,10 @@ button { font: inherit; color: inherit; }
 .ibp-btn.ibp-sm { min-height: 36px; padding: 0 12px; font-size: 14px; }
 /* v1.1.2 — inside a menu or the playlist the button sits on the theme's card, not on the black stage:
  * in the light theme white-on-white made Pause / Stop / Open .txt / Set as default invisible. */
-.ibp-menu .ibp-btn, .ibp-list .ibp-btn { color: var(--txt); background: var(--card2); border-color: var(--line); }
-.ibp-menu .ibp-btn-primary, .ibp-list .ibp-btn-primary { color: var(--accent-ink, #001a24); background: var(--ibp-accent); border-color: transparent; }
-.ibp-menu .ibp-ic, .ibp-list .ibp-ic { color: var(--txt); }
-.ibp-menu .ibp-ic:hover, .ibp-list .ibp-ic:hover { background: var(--card2); }
+.ibp-menu .ibp-btn, .ibp-list .ibp-btn { color: var(--ibp-txt); background: var(--ibp-card2); border-color: var(--ibp-line); }
+.ibp-menu .ibp-btn-primary, .ibp-list .ibp-btn-primary { color: var(--ibp-accent-ink); background: var(--ibp-accent); border-color: transparent; }
+.ibp-menu .ibp-ic, .ibp-list .ibp-ic { color: var(--ibp-txt); }
+.ibp-menu .ibp-ic:hover, .ibp-list .ibp-ic:hover { background: var(--ibp-card2); }
 .ibp-msg { position: absolute; left: 12px; right: 12px; top: 12px; background: #3a1f06ee; color: #ffd9a8; border: 1px solid #f5a62366; border-radius: 10px; padding: 10px 12px; font-size: 14px; z-index: 4; }
 .ibp-flash { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); background: #000000aa; color: #fff; font-size: 22px; font-weight: 700; padding: 10px 18px; border-radius: 12px; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 5; }
 .ibp-flash-on { opacity: 1; transition: none; }
@@ -57,7 +38,7 @@ button { font: inherit; color: inherit; }
 .ibp-bigplay svg { width: 44px; height: 44px; fill: currentColor; }
 .ibp-playing .ibp-bigplay, .ibp-empty:not([hidden]) ~ .ibp-bigplay { display: none; }
 
-.ibp-controls { flex: none; background: var(--ctrl); color: var(--txt); padding: 4px 10px 8px; transition: opacity .25s, transform .25s; z-index: 6; }
+.ibp-controls { flex: none; background: var(--ibp-ctrl); color: var(--ibp-txt); padding: 4px 10px 8px; transition: opacity .25s, transform .25s; z-index: 6; }
 .ibp-fs .ibp-controls, .ibp-fs-fallback .ibp-controls { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(transparent, #000000dd 40%); color: #fff; }
 .ibp-hide .ibp-controls { opacity: 0; transform: translateY(6px); pointer-events: none; }
 .ibp-hide .ibp-stage { cursor: none; }
@@ -71,8 +52,8 @@ button { font: inherit; color: inherit; }
 .ibp-tip { position: absolute; bottom: 24px; transform: translateX(-50%); background: #000000dd; color: #fff; font-size: 12px; padding: 3px 7px; border-radius: 6px; opacity: 0; pointer-events: none; white-space: nowrap; }
 .ibp-seek:hover .ibp-tip, .ibp-scrub .ibp-tip { opacity: 1; }
 .ibp-row { display: flex; align-items: center; gap: 2px; flex-wrap: wrap; }
-.ibp-left, .ibp-right { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.ibp-right { margin-left: auto; }
+.ibp-left, .ibp-right { display: flex; align-items: center; gap: 2px; min-width: 0; max-width: 100%; flex-wrap: wrap; }   /* v1.2.0: wrap on a 360 px phone — Open and Full screen were cut off */
+.ibp-right { margin-left: auto; justify-content: flex-end; }
 .ibp-ic { width: 44px; height: 44px; border: 0; border-radius: 10px; background: transparent; color: inherit; display: grid; place-items: center; cursor: pointer; flex: none; position: relative; }
 .ibp-ic svg { width: 24px; height: 24px; fill: currentColor; }
 .ibp-ic:hover, .ibp-ic:focus-visible { background: #ffffff1a; outline: none; }
@@ -81,7 +62,7 @@ button { font: inherit; color: inherit; }
 .ibp-ic.ibp-sm { width: 36px; height: 36px; }
 .ibp-ic.ibp-sm svg { width: 20px; height: 20px; }
 .ibp-play svg { width: 30px; height: 30px; }
-.ibp-time { font-size: 14px; color: var(--mut); padding: 0 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ibp-time { font-size: 14px; color: var(--ibp-mut); padding: 0 6px; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .ibp-fs .ibp-time, .ibp-fs-fallback .ibp-time { color: #ddd; }
 .ibp-speedbtn { width: auto; min-width: 44px; padding: 0 8px; font-weight: 700; font-size: 14px; }
 .ibp-vol { display: flex; align-items: center; }
@@ -90,53 +71,53 @@ button { font: inherit; color: inherit; }
 @media (hover: none) { .ibp-volrange { display: none; } }
 
 /* ------------------------------ speed menu ------------------------------- */
-.ibp-menu { position: absolute; right: 10px; bottom: 96px; width: min(360px, calc(100% - 20px)); background: var(--card); color: var(--txt); border: 1px solid var(--line); border-radius: 14px; padding: 12px; box-shadow: 0 12px 40px #00000088; z-index: 8; }
+.ibp-menu { position: absolute; right: 10px; bottom: 96px; width: min(360px, calc(100% - 20px)); background: var(--ibp-card); color: var(--ibp-txt); border: 1px solid var(--ibp-line); border-radius: 14px; padding: 12px; box-shadow: 0 12px 40px #00000088; z-index: 8; }
 .ibp-menu[hidden] { display: none; }
 .ibp-menu-h { display: flex; align-items: center; justify-content: space-between; font-weight: 700; margin-bottom: 8px; }
 .ibp-presets { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.ibp-chip { min-height: 40px; border-radius: 9px; border: 1px solid var(--line); background: var(--card2); color: inherit; cursor: pointer; font-weight: 600; font-size: 14px; }
+.ibp-chip { min-height: 40px; border-radius: 9px; border: 1px solid var(--ibp-line); background: var(--ibp-card2); color: inherit; cursor: pointer; font-weight: 600; font-size: 14px; }
 .ibp-chip.ibp-on { background: var(--ibp-accent); color: #001a24; border-color: transparent; }
-.ibp-custom { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
-.ibp-custom-h { display: flex; justify-content: space-between; font-size: 14px; color: var(--mut); }
-.ibp-custom-h b { color: var(--txt); font-size: 16px; }
+.ibp-custom { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ibp-line); }
+.ibp-custom-h { display: flex; justify-content: space-between; font-size: 14px; color: var(--ibp-mut); }
+.ibp-custom-h b { color: var(--ibp-txt); font-size: 16px; }
 .ibp-custom-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .ibp-custom-row .ibp-chip { width: 40px; flex: none; font-size: 20px; line-height: 1; }
 .ibp-raterange { flex: 1; accent-color: var(--ibp-accent); height: 40px; margin: 0; min-width: 0; }
-.ibp-custom-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--mut); padding: 0 48px; }
-.ibp-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--mut); min-height: 32px; }
+.ibp-custom-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--ibp-mut); padding: 0 48px; }
+.ibp-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--ibp-mut); min-height: 32px; }
 .ibp-check input { width: 18px; height: 18px; accent-color: var(--ibp-accent); }
 
 /* -------------------------------- read aloud ------------------------------- */
 .ibp-readmenu { width: min(440px, calc(100% - 20px)); }
-.ibp-readtext { width: 100%; min-height: 96px; max-height: 40dvh; resize: vertical; font: inherit; font-size: 15px; color: var(--txt); background: var(--card2); border: 1px solid var(--line); border-radius: 10px; padding: 10px; }
+.ibp-readtext { width: 100%; min-height: 96px; max-height: 40dvh; resize: vertical; font: inherit; font-size: 15px; color: var(--ibp-txt); background: var(--ibp-card2); border: 1px solid var(--ibp-line); border-radius: 10px; padding: 10px; }
 .ibp-read-row { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
-.ibp-read-lab { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--mut); flex: 1; min-width: 0; }
-.ibp-voices { flex: 1; min-width: 0; min-height: 40px; font: inherit; font-size: 14px; color: var(--txt); background: var(--card2); border: 1px solid var(--line); border-radius: 9px; padding: 0 8px; }
-.ibp-read-rate b { color: var(--txt); min-width: 44px; }
+.ibp-read-lab { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ibp-mut); flex: 1; min-width: 0; }
+.ibp-voices { flex: 1; min-width: 0; min-height: 40px; font: inherit; font-size: 14px; color: var(--ibp-txt); background: var(--ibp-card2); border: 1px solid var(--ibp-line); border-radius: 9px; padding: 0 8px; }
+.ibp-read-rate b { color: var(--ibp-txt); min-width: 44px; }
 .ibp-readrate { flex: 1; min-width: 0; accent-color: var(--ibp-accent); height: 40px; margin: 0; }
 .ibp-read-btns .ibp-btn { display: inline-flex; align-items: center; gap: 6px; }
 .ibp-read-btns .ibp-btn svg { width: 18px; height: 18px; fill: currentColor; }
-.ibp-read-hint { margin-top: 8px; font-size: 13px; color: var(--mut); min-height: 18px; }
+.ibp-read-hint { margin-top: 8px; font-size: 13px; color: var(--ibp-mut); min-height: 18px; }
 .ibp-reading .ibp-readbtn { color: var(--ibp-accent); }
 
 /* -------------------------------- playlist -------------------------------- */
-.ibp-list { grid-row: 2; background: var(--card); color: var(--txt); border-top: 1px solid var(--line); display: none; flex-direction: column; min-height: 0; max-height: 45dvh; }
+.ibp-list { grid-row: 2; min-width: 0; background: var(--ibp-card); color: var(--ibp-txt); border-top: 1px solid var(--ibp-line); display: none; flex-direction: column; min-height: 0; max-height: 45dvh; }
 .ibp-list.ibp-list-open { display: flex; }
-.ibp-list-h { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.ibp-list-h { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-bottom: 1px solid var(--ibp-line); flex-wrap: wrap; }
 .ibp-list-title { font-weight: 700; }
-.ibp-list-count { color: var(--mut); font-size: 14px; }
+.ibp-list-count { color: var(--ibp-mut); font-size: 14px; }
 .ibp-list-acts { margin-left: auto; display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .ibp-items { list-style: none; padding: 6px; overflow: auto; min-height: 0; }
 .ibp-item { display: flex; align-items: center; gap: 8px; padding: 8px; border-radius: 10px; cursor: pointer; min-height: 52px; }
-.ibp-item:hover { background: var(--card2); }
-.ibp-item.ibp-current { background: var(--card2); box-shadow: inset 3px 0 0 var(--ibp-accent); }
+.ibp-item:hover { background: var(--ibp-card2); }
+.ibp-item.ibp-current { background: var(--ibp-card2); box-shadow: inset 3px 0 0 var(--ibp-accent); }
 .ibp-item-ico { flex: none; width: 32px; height: 32px; border-radius: 8px; background: #ffffff10; display: grid; place-items: center; }
-.ibp-item-ico svg { width: 18px; height: 18px; fill: var(--mut); }
+.ibp-item-ico svg { width: 18px; height: 18px; fill: var(--ibp-mut); }
 .ibp-item-t { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ibp-item-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ibp-item-sub { font-size: 12px; color: var(--mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ibp-item-rm { color: var(--mut); }
-.ibp-list-empty { padding: 20px; color: var(--mut); text-align: center; font-size: 14px; }
+.ibp-item-sub { font-size: 12px; color: var(--ibp-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ibp-item-rm { color: var(--ibp-mut); }
+.ibp-list-empty { padding: 20px; color: var(--ibp-mut); text-align: center; font-size: 14px; }
 .ibp-list-empty[hidden] { display: none; }
 .ibp-dragover::after { content: "Drop to add to the playlist"; position: absolute; inset: 8px; border: 2px dashed var(--ibp-accent); border-radius: 14px; display: grid; place-items: center; font-size: 18px; font-weight: 700; color: #fff; background: #00000088; z-index: 9; pointer-events: none; }
 .ibp-fs, .ibp-fs-fallback { position: fixed !important; inset: 0; z-index: 1000; height: 100dvh !important; }
@@ -145,17 +126,31 @@ button { font: inherit; color: inherit; }
 /* --------------------------------- desktop -------------------------------- */
 @media (min-width: 900px) {
   .ibp { grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: minmax(0, 1fr); }
-  .ibp-list { grid-row: 1; grid-column: 2; width: 0; max-height: none; border-top: 0; border-left: 1px solid var(--line); display: flex; overflow: hidden; transition: width .2s; }
+  .ibp-list { grid-row: 1; grid-column: 2; width: 0; max-height: none; border-top: 0; border-left: 1px solid var(--ibp-line); display: flex; overflow: hidden; transition: width .2s; }
   .ibp-list.ibp-list-open { width: 340px; }
   .ibp-list-close { display: none; }
-  .foot { display: block; text-align: center; font-size: 12px; color: var(--mut); padding: 6px; }
-  .wrap { height: calc(100dvh - 57px - 30px); }
 }
 @media (max-width: 480px) {
-  .top { padding: 8px 12px; }
-  .top .now { display: none; }
   .ibp-controls { padding: 2px 4px 6px; }
   .ibp-ic { width: 40px; height: 40px; }
   .ibp-time { font-size: 13px; padding: 0 4px; }
   .ibp-menu { bottom: 88px; }
+}
+
+/* v1.2.0 — THE DIVIDER between player and playlist (CEO, 28 Sep 2026): drag it left or right, like the
+ * playlist pane of Windows Media Player or the sidebar of VS Code. The width is remembered; arrow keys
+ * move it; a double-click restores the default. Desktop only — on a phone the playlist sits below. */
+.ibp-split { display: none; }
+.ibp-fs .ibp-split, .ibp-fs-fallback .ibp-split { display: none !important; }
+@media (min-width: 900px) {
+  .ibp { grid-template-columns: minmax(0, 1fr) auto auto; }
+  .ibp-list { grid-column: 3; }
+  .ibp-list.ibp-list-open { width: var(--ibp-list-w, 340px); }
+  .ibp:has(.ibp-list-open) .ibp-split { display: block; grid-row: 1; grid-column: 2; width: 10px; margin: 0 -5px; position: relative; z-index: 7; cursor: col-resize; touch-action: none; outline: none; }
+  .ibp-split::after { content: ""; position: absolute; top: 0; bottom: 0; left: 4px; width: 2px; background: var(--ibp-line); transition: background .15s, width .15s, left .15s; }
+  .ibp-split:hover::after, .ibp-split:focus-visible::after, .ibp-resizing .ibp-split::after { background: var(--ibp-accent); width: 4px; left: 3px; }
+  .ibp-split::before { content: ""; position: absolute; top: 50%; left: 1px; width: 8px; height: 40px; margin-top: -20px; border-radius: 4px; background: var(--ibp-card2); border: 1px solid var(--ibp-line); }
+  .ibp-resizing, .ibp-resizing * { cursor: col-resize !important; user-select: none; }
+  .ibp-resizing .ibp-list { transition: none; }
+  .ibp-list { border-left: 0; }
 }

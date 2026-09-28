@@ -23,7 +23,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.0.0";
+  const VERSION = "1.2.0";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   const VIDEO_EXT = ["mp4", "m4v", "webm", "mkv", "mov", "ogv", "3gp", "3g2", "avi", "ts", "mts", "m2ts", "mpg", "mpeg", "wmv", "flv"];
@@ -160,6 +160,7 @@
           <div class="ibp-read-hint"></div>
         </div>
       </div>
+      <div class="ibp-split" role="separator" aria-orientation="vertical" aria-label="Resize the playlist — drag, or use the arrow keys; double-click resets" title="Drag to resize the playlist · double-click to reset" tabindex="0"></div>
       <aside class="ibp-list" aria-label="Playlist">
         <div class="ibp-list-h"><span class="ibp-list-title">Playlist</span><span class="ibp-list-count"></span>
           <span class="ibp-list-acts">${o.showOpen ? `<button type="button" class="ibp-btn ibp-sm" data-act="open">Open</button><button type="button" class="ibp-btn ibp-sm" data-act="open-folder">Folder</button><button type="button" class="ibp-btn ibp-sm" data-act="open-cc">Captions</button>` : ""}<button type="button" class="ibp-btn ibp-sm" data-act="clear">Clear</button><button type="button" class="ibp-ic ibp-sm ibp-list-close" data-act="list" aria-label="Close playlist">${ICON.close}</button></span></div>
@@ -180,6 +181,42 @@
     const volRange = $(".ibp-volrange"), muteBtn = $("[data-act=mute]"), fullBtn = $("[data-act=full]"), repeatBtn = $(".ibp-repeatbtn");
     const ccBtn = $(".ibp-ccbtn"), pipBtn = $(".ibp-pipbtn"), listEl = $(".ibp-list"), itemsEl = $(".ibp-items"), listCount = $(".ibp-list-count"), listEmpty = $(".ibp-list-empty");
     const fileIn = $(".ibp-file"), folderIn = $(".ibp-folder"), ccIn = $(".ibp-ccfile");
+
+    // v1.2.0 — THE DIVIDER between player and playlist (desktop, >= 900 px): drag it left or right like the
+    // playlist pane of Windows Media Player, so long titles and dates show in full. Remembered per browser;
+    // arrow keys move it 20 px (Shift = 60), Home / End = narrowest / widest, double-click = default 340 px.
+    const split = $(".ibp-split"), LIST_W = 340, LIST_MIN = 240;
+    const listMax = () => Math.max(LIST_MIN, Math.min(root.clientWidth * 0.7, root.clientWidth - 360));
+    function setListW(w, save) {
+      if (!root.clientWidth) return 0;   // not on screen (a host page hid it) — keep the saved width
+      const v = Math.round(clamp(w, LIST_MIN, listMax()));
+      root.style.setProperty("--ibp-list-w", v + "px");
+      split.setAttribute("aria-valuenow", String(v)); split.setAttribute("aria-valuemin", String(LIST_MIN)); split.setAttribute("aria-valuemax", String(Math.round(listMax())));
+      if (save) LS("ibp:listW", String(v));
+      return v;
+    }
+    const savedW = () => Number(LS("ibp:listW")) || LIST_W;
+    split.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      e.preventDefault(); try { split.setPointerCapture(e.pointerId); } catch {} split.focus({ preventScroll: true });
+      const x0 = e.clientX, w0 = listEl.getBoundingClientRect().width;
+      root.classList.add("ibp-resizing");
+      const move = (ev) => setListW(w0 + (x0 - ev.clientX), false);
+      const up = (ev) => { split.removeEventListener("pointermove", move); split.removeEventListener("pointerup", up); split.removeEventListener("pointercancel", up); root.classList.remove("ibp-resizing"); setListW(w0 + (x0 - ev.clientX), true); };
+      split.addEventListener("pointermove", move); split.addEventListener("pointerup", up); split.addEventListener("pointercancel", up);
+    });
+    split.addEventListener("dblclick", () => { setListW(LIST_W, true); showFlash("Playlist width reset"); });
+    split.addEventListener("keydown", (e) => {
+      const cur = listEl.getBoundingClientRect().width, step = e.shiftKey ? 60 : 20;
+      if (e.key === "ArrowLeft") setListW(cur + step, true);          // the divider moves left = a wider playlist
+      else if (e.key === "ArrowRight") setListW(cur - step, true);
+      else if (e.key === "Home") setListW(LIST_MIN, true);
+      else if (e.key === "End") setListW(listMax(), true);
+      else if (e.key === "Enter") setListW(LIST_W, true);
+      else return;
+      e.preventDefault();
+    });
+    window.addEventListener("resize", () => setListW(savedW(), false));
 
     const st = {
       items: [], index: -1, repeat: LS("ibp:repeat") || "off", shuffle: false, rate: Number(LS("ibp:rate")) || 1,
@@ -505,6 +542,7 @@
       const tag = (e.target.tagName || "").toLowerCase();
       if (tag === "input" && e.target.type !== "range" || tag === "textarea" || e.target.isContentEditable) return;
       if (o.keysGlobal === false && !root.contains(e.target)) return;
+      if (e.target === split) return;   // the divider owns its own arrow keys
       const k = e.key;
       let handled = true;
       if (k === " " || k === "k" || k === "K") togglePlay();
@@ -545,6 +583,7 @@
 
     // Initial state.
     setVolume(st.volume); setMuted(st.muted); pitchBox.checked = st.pitch; applyRate(st.rate); updateRepeat();
+    setListW(savedW(), false); requestAnimationFrame(() => setListW(savedW(), false));   // again once laid out
     if (!document.pictureInPictureEnabled) pipBtn.hidden = true;
     if (o.items && o.items.length) addItems(o.items, { play: o.autoplay });
 
