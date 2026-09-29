@@ -23,7 +23,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.2.0";
+  const VERSION = "1.2.1";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   const VIDEO_EXT = ["mp4", "m4v", "webm", "mkv", "mov", "ogv", "3gp", "3g2", "avi", "ts", "mts", "m2ts", "mpg", "mpeg", "wmv", "flv"];
@@ -83,8 +83,14 @@
     read: '<svg viewBox="0 0 24 24"><path d="M4 5h11v2H4zm0 4h11v2H4zm0 4h7v2H4zm0 4h7v2H4zm13.5-6a4.5 4.5 0 0 1 0 6.4l-1.4-1.4a2.5 2.5 0 0 0 0-3.6zm2.8-2.8a8.5 8.5 0 0 1 0 12l-1.4-1.4a6.5 6.5 0 0 0 0-9.2z"/></svg>',
   };
 
+  const LIVE = new Set();   // v1.2.1 — every mounted player's <video>, so only one ever plays
   function mount(root, options) {
     const o = Object.assign({ items: [], title: "", autoplay: false, showOpen: true, accept: "" }, options || {});
+    // v1.2.1 — every page-level listener is tied to this instance, so destroy() removes them all. A player
+    // that was replaced (a host page redrawn) used to keep answering Space in the background: two voices at once.
+    const ac = new AbortController();
+    const onDoc = (ev, fn) => document.addEventListener(ev, fn, { signal: ac.signal });
+    const onWin = (ev, fn) => window.addEventListener(ev, fn, { signal: ac.signal });
     const id = "ibp" + Math.random().toString(36).slice(2, 8);
     root.classList.add("ibp");
     root.innerHTML = `
@@ -216,7 +222,7 @@
       else return;
       e.preventDefault();
     });
-    window.addEventListener("resize", () => setListW(savedW(), false));
+    onWin("resize", () => setListW(savedW(), false));
 
     const st = {
       items: [], index: -1, repeat: LS("ibp:repeat") || "off", shuffle: false, rate: Number(LS("ibp:rate")) || 1,
@@ -229,12 +235,8 @@
     function addItems(list, { play = true } = {}) {
       const added = [];
       for (const raw of list) {
-        const it = raw.file
-          ? { file: raw.file, name: raw.file.name, title: raw.title || raw.file.name.replace(/\.[^.]+$/, ""), mime: raw.file.type || MIME[extOf(raw.file.name)] || "", kind: kindOf(raw.file.name, raw.file.type) }
-          : { url: raw.url, name: raw.name || decodeURIComponent(String(raw.url).split("/").pop() || ""), title: raw.title || decodeURIComponent(String(raw.url).split("/").pop() || "").replace(/\.[^.]+$/, ""), mime: raw.mime || MIME[extOf(raw.url)] || "", kind: raw.kind || kindOf(raw.url, raw.mime), poster: raw.poster || "" };
-        if (it.kind === "caption") { attachCaptionFile(raw.file); continue; }
-        if (!it.kind) { it.kind = "video"; }   // unknown extension: let the browser try
-        it.key = keyOf(it);
+        const it = makeItem(raw);
+        if (!it) continue;
         if (st.items.some((x) => x.key === it.key)) continue;
         st.items.push(it); added.push(it);
       }
@@ -242,6 +244,35 @@
       if (added.length && play && (st.index < 0 || video.paused && !video.currentTime)) load(st.items.indexOf(added[0]), true);
       else if (st.index < 0 && st.items.length) load(0, false);
       return added.length;
+    }
+    function makeItem(raw) {
+        const it = raw.file
+          ? { file: raw.file, name: raw.file.name, title: raw.title || raw.file.name.replace(/\.[^.]+$/, ""), mime: raw.file.type || MIME[extOf(raw.file.name)] || "", kind: kindOf(raw.file.name, raw.file.type) }
+          : { url: raw.url, name: raw.name || decodeURIComponent(String(raw.url).split("/").pop() || ""), title: raw.title || decodeURIComponent(String(raw.url).split("/").pop() || "").replace(/\.[^.]+$/, ""), mime: raw.mime || MIME[extOf(raw.url)] || "", kind: raw.kind || kindOf(raw.url, raw.mime), poster: raw.poster || "" };
+        if (it.kind === "caption") { attachCaptionFile(raw.file); return null; }
+        if (!it.kind) { it.kind = "video"; }   // unknown extension: let the browser try
+        it.key = keyOf(it);
+        return it;
+    }
+    // v1.2.1 — replace the playlist with a host's fresh list, in the host's order, WITHOUT interrupting playback:
+    // the playing item stays loaded and current, durations already read are kept, files the user opened
+    // themselves stay at the end, and the list keeps its scroll position. Returns true when anything changed.
+    function syncItems(list) {
+      const cur = st.items[st.index] || null, old = new Map(st.items.map((x) => [x.key, x]));
+      const fresh = [];
+      for (const raw of list || []) { const it = raw.file ? null : makeItem(raw); if (it && !fresh.some((x) => x.key === it.key)) fresh.push(it); }
+      fresh.forEach((x) => { const o = old.get(x.key); if (o && o.duration) x.duration = o.duration; });
+      const keys = new Set(fresh.map((x) => x.key));
+      const next = [...fresh, ...st.items.filter((x) => x.file && !keys.has(x.key))];
+      if (cur && !next.some((x) => x.key === cur.key)) next.push(cur);   // never pull the playing item away
+      const same = next.length === st.items.length && next.every((x, i) => x.key === st.items[i].key && x.name === st.items[i].name && x.title === st.items[i].title);
+      if (same) return false;
+      st.items = next.map((x) => (cur && x.key === cur.key ? Object.assign(cur, { name: x.name, title: x.title }) : x));
+      st.index = cur ? st.items.indexOf(cur) : -1;
+      const top = itemsEl.scrollTop;
+      renderList(); itemsEl.scrollTop = top;
+      if (st.index < 0 && st.items.length) load(0, false);
+      return true;
     }
     function load(i, play) {
       if (i < 0 || i >= st.items.length) return;
@@ -435,11 +466,12 @@
     }
     readRate.addEventListener("input", () => { readRateVal.textContent = fmtRate(Number(readRate.value)) === "Normal" ? "1×" : fmtRate(Number(readRate.value)); if (synth && synth.speaking) { const t = readText.value; const pos = 0; void pos; void t; } });
     txtIn.addEventListener("change", async () => { const f = txtIn.files[0]; if (f) { readText.value = await f.text(); readHint.textContent = `${f.name} loaded — press Read.`; } txtIn.value = ""; });
-    document.addEventListener("click", (e) => { if (!readMenu.hidden && !e.target.closest(".ibp-readmenu") && !e.target.closest("[data-act=read]")) readMenu.hidden = true; });
-    window.addEventListener("beforeunload", () => { if (synth && synth.speaking) synth.cancel(); });
+    onDoc("click", (e) => { if (!readMenu.hidden && !e.target.closest(".ibp-readmenu") && !e.target.closest("[data-act=read]")) readMenu.hidden = true; });
+    onWin("beforeunload", () => { if (synth && synth.speaking) synth.cancel(); });
 
     /* ---------------------------------- events --------------------------------- */
-    video.addEventListener("play", () => { if (synth && synth.speaking) { synth.cancel(); root.classList.remove("ibp-reading"); } playBtns.forEach((b) => { b.innerHTML = ICON.pause; b.setAttribute("aria-label", "Pause (Space)"); }); root.classList.add("ibp-playing"); scheduleHide(); });
+    LIVE.add(video);
+    video.addEventListener("play", () => { LIVE.forEach((v) => { if (v !== video && !v.paused) v.pause(); }); if (!root.isConnected) { video.pause(); return; }  if (synth && synth.speaking) { synth.cancel(); root.classList.remove("ibp-reading"); } playBtns.forEach((b) => { b.innerHTML = ICON.pause; b.setAttribute("aria-label", "Pause (Space)"); }); root.classList.add("ibp-playing"); scheduleHide(); });
     video.addEventListener("pause", () => { playBtns.forEach((b) => { b.innerHTML = ICON.play; b.setAttribute("aria-label", "Play (Space)"); }); root.classList.remove("ibp-playing"); root.classList.remove("ibp-hide"); savePos(); });
     video.addEventListener("ended", () => { savePos(); if (st.repeat !== "one") next(); });
     video.addEventListener("timeupdate", () => { if (!st.dragging) paint(); if (!st.saveTimer) st.saveTimer = setTimeout(() => { st.saveTimer = 0; savePos(); }, 5000); });
@@ -513,7 +545,7 @@
       else if (act === "clear") { video.pause(); video.removeAttribute("src"); video.load(); st.items = []; st.index = -1; art.hidden = true; empty.hidden = false; renderList(); }
     });
     function toggleMenu(m, force) { const open = force == null ? m.hidden : force; m.hidden = !open; if (open) { rateRange.focus({ preventScroll: true }); } }
-    document.addEventListener("click", (e) => { if (!speedMenu.hidden && !e.target.closest(".ibp-speedmenu") && !e.target.closest("[data-act=speed]")) speedMenu.hidden = true; });
+    onDoc("click", (e) => { if (!speedMenu.hidden && !e.target.closest(".ibp-speedmenu") && !e.target.closest("[data-act=speed]")) speedMenu.hidden = true; });
     fileIn.addEventListener("change", () => { addItems(Array.from(fileIn.files).map((f) => ({ file: f }))); fileIn.value = ""; });
     folderIn.addEventListener("change", () => { const fs = Array.from(folderIn.files).filter((f) => kindOf(f.name, f.type)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })); addItems(fs.map((f) => ({ file: f }))); folderIn.value = ""; });
     ccIn.addEventListener("change", () => { attachCaptionFile(ccIn.files[0]); ccIn.value = ""; });
@@ -541,6 +573,7 @@
     function onKey(e) {
       const tag = (e.target.tagName || "").toLowerCase();
       if (tag === "input" && e.target.type !== "range" || tag === "textarea" || e.target.isContentEditable) return;
+      if (!root.isConnected) return;   // v1.2.1 — a player no longer on the page never reacts
       if (o.keysGlobal === false && !root.contains(e.target)) return;
       if (e.target === split) return;   // the divider owns its own arrow keys
       const k = e.key;
@@ -570,16 +603,16 @@
       else handled = false;
       if (handled) e.preventDefault();
     }
-    document.addEventListener("keydown", onKey);
+    onDoc("keydown", onKey);
     // Shift+, and Shift+. are < and > on most keyboards; 0.05 steps with Alt.
-    document.addEventListener("keydown", (e) => { if (e.altKey && (e.key === "." || e.key === ">")) { setRate(st.rate + 0.05); e.preventDefault(); } if (e.altKey && (e.key === "," || e.key === "<")) { setRate(st.rate - 0.05); e.preventDefault(); } });
+    onDoc("keydown", (e) => { if (e.altKey && (e.key === "." || e.key === ">")) { setRate(st.rate + 0.05); e.preventDefault(); } if (e.altKey && (e.key === "," || e.key === "<")) { setRate(st.rate - 0.05); e.preventDefault(); } });
 
     // Controls hide while playing video and the pointer is still.
     function scheduleHide() { clearTimeout(st.hideTimer); root.classList.remove("ibp-hide"); if (!video.paused && !root.classList.contains("ibp-audio")) st.hideTimer = setTimeout(() => { if (speedMenu.hidden) root.classList.add("ibp-hide"); }, 2600); }
     ["pointermove", "pointerdown", "keydown", "touchstart"].forEach((ev) => root.addEventListener(ev, scheduleHide, { passive: true }));
-    document.addEventListener("fullscreenchange", () => { const on = document.fullscreenElement === root; root.classList.toggle("ibp-fs", on); fullBtn.innerHTML = on ? ICON.unfull : ICON.full; });
-    window.addEventListener("beforeunload", savePos);
-    document.addEventListener("visibilitychange", () => { if (document.hidden) savePos(); });
+    onDoc("fullscreenchange", () => { const on = document.fullscreenElement === root; root.classList.toggle("ibp-fs", on); fullBtn.innerHTML = on ? ICON.unfull : ICON.full; });
+    onWin("beforeunload", savePos);
+    onDoc("visibilitychange", () => { if (document.hidden) savePos(); });
 
     // Initial state.
     setVolume(st.volume); setMuted(st.muted); pitchBox.checked = st.pitch; applyRate(st.rate); updateRepeat();
@@ -593,9 +626,9 @@
     }
 
     return {
-      version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), play: () => video.play(), pause: () => video.pause(),
+      version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), sync: (list) => syncItems(list), play: () => video.play(), pause: () => video.pause(),
       setRate, seekTo, next, prev, get state() { return { ...st }; }, openFiles: () => fileIn.click(),
-      destroy() { document.removeEventListener("keydown", onKey); savePos(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; },
+      destroy() { savePos(); ac.abort(); video.pause(); video.removeAttribute("src"); try { video.load(); } catch {} LIVE.delete(video); if (synth && synth.speaking) synth.cancel(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; root.classList.remove("ibp"); },
     };
   }
 
