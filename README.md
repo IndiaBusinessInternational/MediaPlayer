@@ -1,4 +1,6 @@
-# IBI Media Player v1.2.1
+# IBI Media Player v1.2.2
+
+**A tall video fits the stage (v1.2.2)** — 30 Sep 2026, CEO in Social Flow: "At 100 % it looks too big to play". The stage is a grid that centres its content, so the video's `height: 100%` resolved against an auto-sized row — its own natural height — and a 9:16 Short in a wide player ran off the bottom with the controls. The video is now absolutely positioned inside the stage (`inset: 0`), so 100% is the stage's box and `object-fit: contain` does its job. Landscape videos are unchanged. Hosts (Social Flow, YouTube Grower) re-copy `styles.css` + `app.js`.
 
 **One voice at a time; a host can refresh the playlist (v1.2.1)** — 29 Sep 2026, CEO in the Grower: "2 voices heard simultaneously … not playing properly". A page redraw had left a second, unseen player running; both answered Space, so one played hidden while the visible one showed paused. Now (1) starting any player pauses every other player on the page, the standard of every media app; (2) a player no longer on the page ignores the keyboard; (3) `destroy()` really stops: it pauses, unloads the file, cancels read-aloud and removes every page-level listener (one AbortController). New `api.sync(list)` replaces the playlist with a host's fresh list in the host's order without interrupting playback. The playing item stays current, durations already read and the user's own opened files are kept, and the list keeps its scroll position.
 

@@ -8,7 +8,10 @@
 :where(.ibp) button { font: inherit; color: inherit; }
 .ibp-main { position: relative; display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .ibp-stage { position: relative; flex: 1 1 auto; min-height: 0; background: #000; outline: none; display: grid; place-items: center; }
-.ibp-stage video { width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
+/* v1.2.2 — the video is ABSOLUTE inside the stage: as a grid item its `height:100%` resolved against an
+ * auto-sized grid row, i.e. its own natural height, so a 9:16 Short in a wide player ran off the bottom
+ * and the controls went with it (Social Flow, 30 Sep 2026: "too big to play"). Absolute = the stage's box. */
+.ibp-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
 .ibp-audio .ibp-stage video { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
 .ibp-art { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 6px; padding: 24px; background: radial-gradient(60% 50% at 50% 40%, #16324a 0%, #0a0f16 70%); cursor: pointer; }
 .ibp-art[hidden] { display: none; }
