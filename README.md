@@ -1,4 +1,6 @@
-# IBI Media Player v1.2.2
+# IBI Media Player v1.2.3
+
+**The progress dot is always visible (v1.2.3)** — 30 Sep 2026, CEO in Social Flow: "a small dot that is viewable and moves when video is played". The knob on the seek bar was hidden until hover; it now shows at rest at 65 % size and grows on hover or while scrubbing. Hosts whose theme variables are not CSS colours (Tailwind HSL triples) must set `--ibp-accent` etc. on the mount root themselves, or the played strip and the dot are transparent.
 
 **A tall video fits the stage (v1.2.2)** — 30 Sep 2026, CEO in Social Flow: "At 100 % it looks too big to play". The stage is a grid that centres its content, so the video's `height: 100%` resolved against an auto-sized row — its own natural height — and a 9:16 Short in a wide player ran off the bottom with the controls. The video is now absolutely positioned inside the stage (`inset: 0`), so 100% is the stage's box and `object-fit: contain` does its job. Landscape videos are unchanged. Hosts (Social Flow, YouTube Grower) re-copy `styles.css` + `app.js`.
 

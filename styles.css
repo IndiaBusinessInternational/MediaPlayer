@@ -50,7 +50,9 @@
 .ibp-seek:hover .ibp-seek-track, .ibp-scrub .ibp-seek-track, .ibp-seek:focus-visible .ibp-seek-track { transform: scaleY(1.6); }
 .ibp-buf { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #ffffff55; }
 .ibp-prog { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: var(--ibp-accent); }
-.ibp-knob { position: absolute; top: 14px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ibp-accent); transform: translateY(-50%) scale(0); transition: transform .15s; box-shadow: 0 0 0 4px #00000033; }
+/* v1.2.3 — the dot stays visible at rest (a small one) and grows on hover/scrub, so the eye can always find
+ * where the video is (CEO, 30 Sep 2026: "a small dot that is viewable and moves when video is played"). */
+.ibp-knob { position: absolute; top: 14px; width: 14px; height: 14px; margin-left: -7px; border-radius: 50%; background: var(--ibp-accent); transform: translateY(-50%) scale(0.65); transition: transform .15s; box-shadow: 0 0 0 4px #00000033; }
 .ibp-seek:hover .ibp-knob, .ibp-scrub .ibp-knob, .ibp-seek:focus-visible .ibp-knob { transform: translateY(-50%) scale(1); }
 .ibp-tip { position: absolute; bottom: 24px; transform: translateX(-50%); background: #000000dd; color: #fff; font-size: 12px; padding: 3px 7px; border-radius: 6px; opacity: 0; pointer-events: none; white-space: nowrap; }
 .ibp-seek:hover .ibp-tip, .ibp-scrub .ibp-tip { opacity: 1; }

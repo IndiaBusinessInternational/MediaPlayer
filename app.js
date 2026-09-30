@@ -23,7 +23,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.2.2";
+  const VERSION = "1.2.3";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   const VIDEO_EXT = ["mp4", "m4v", "webm", "mkv", "mov", "ogv", "3gp", "3g2", "avi", "ts", "mts", "m2ts", "mpg", "mpeg", "wmv", "flv"];
