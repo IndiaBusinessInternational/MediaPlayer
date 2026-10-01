@@ -1,4 +1,6 @@
-# IBI Media Player v1.3.0
+# IBI Media Player v1.3.1
+
+**The boost colour can be set by the host (v1.3.1)** — 1 Oct 2026. The boost zone is orange, but IBI Social Flow's own accent is orange too, so the two fills looked the same there. The boost colour is now `--ibp-boost` (and `--ibp-boost-ink` for text on it), taken from the host's `--boost` / `--boost-ink` or set inline; the default stays orange. Social Flow sets red.
 
 **Volume boost up to 200% (v1.3.0)** — 1 Oct 2026, CEO: "I want more audio. add a feature to increase the volume further more, as per industry standards". The volume now goes past 100% up to 200%, the VLC standard. The slider's middle notch is 100%; the part above it fills in orange, and the percentage stays on screen while boosting. ↑ keeps going past 100% in 5% steps. The Speed and volume menu has a Volume section with Mute, 50%, 100%, 150% and 200% buttons, a slider and −/+, and on a touch screen the speaker button opens it. Above 100% the sound runs through Web Audio: a gain stage, a limiter at −3 dBFS and a soft-clip safety stage, so a 2× boost makes speech louder with no clipped samples (measured: a loud speech MP3 gains +3.3 dB at 150% and +4.0 dB at 200%; a quiet recording gets the full +6 dB). 0–100% is unchanged and bypasses all three. The boost works for files on the device and on the same site; it is remembered like the volume.
 

@@ -1,4 +1,4 @@
-/* IBI Media Player — the player library. v1.3.0 (1 Oct 2026; born v1.0.0 27 Sep 2026)
+/* IBI Media Player — the player library. v1.3.1 (1 Oct 2026; born v1.0.0 27 Sep 2026)
  *
  * One file, no dependencies. `IBIPlayer.mount(root, options)` builds a complete audio/video
  * player inside `root` and returns a small API; `index.html` mounts it standalone, and the
@@ -23,7 +23,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.3.0";
+  const VERSION = "1.3.1";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   /* v1.3.0 — VOLUME BOOST past 100 %, VLC's standard (CEO, 1 Oct 2026: "I want more audio … increase the
