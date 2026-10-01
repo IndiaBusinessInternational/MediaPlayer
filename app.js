@@ -1,4 +1,4 @@
-/* IBI Media Player — the player library. v1.4.0 (1 Oct 2026: photo slideshow; born v1.0.0 27 Sep 2026)
+/* IBI Media Player — the player library. v1.4.1 (1 Oct 2026: an opened file plays at once; v1.4.0 photo slideshow; born v1.0.0 27 Sep 2026)
  *
  * One file, no dependencies. `IBIPlayer.mount(root, options)` builds a complete audio/video
  * player inside `root` and returns a small API; `index.html` mounts it standalone, and the
@@ -24,7 +24,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.4.0";
+  const VERSION = "1.4.1";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   /* v1.3.0 — VOLUME BOOST past 100 %, VLC's standard (CEO, 1 Oct 2026: "I want more audio … increase the
@@ -331,19 +331,29 @@
 
     /* ---------------------------------- items ---------------------------------- */
     function keyOf(it) { return it.file ? `${it.file.name}|${it.file.size}|${it.file.lastModified}` : `url|${it.url}`; }
-    function addItems(list, { play = true } = {}) {
+    /* v1.4.1 — `now: true` = the user OPENED these files (Windows "Open with" / double-click into the running
+     * app, the Open and Folder buttons, a drop): play the first one at once, even when something else is
+     * playing or was stopped midway, and even when that file is already in the playlist (it is not added
+     * twice — its existing entry plays). The standard of VLC and Windows Media Player. CEO, 1 Oct 2026: the
+     * installed app kept showing the old audio and he had to close the player before a new one would open. */
+    function addItems(list, { play = true, now = false } = {}) {
       const added = [];
+      let first = -1;
       for (const raw of list) {
         const it = makeItem(raw);
         if (!it) continue;
-        if (st.items.some((x) => x.key === it.key)) continue;
+        const have = st.items.findIndex((x) => x.key === it.key);
+        if (have >= 0) { if (first < 0) first = have; continue; }
         st.items.push(it); added.push(it);
+        if (first < 0) first = st.items.length - 1;
       }
       renderList();
-      if (added.length && play && (st.index < 0 || !playingNow() && !(isPhoto() ? ph.elapsed : video.currentTime))) load(st.items.indexOf(added[0]), true);
+      if (now && first >= 0) { load(first, true); if (added.length > 1) showFlash(`${added.length} added to the playlist`); }
+      else if (added.length && play && (st.index < 0 || !playingNow() && !(isPhoto() ? ph.elapsed : video.currentTime))) load(st.items.indexOf(added[0]), true);
       else if (st.index < 0 && st.items.length) load(0, false);
       return added.length;
     }
+    const openNow = (files) => addItems(files.map((f) => ({ file: f })), { now: true });
     function makeItem(raw) {
         const it = raw.file
           ? { file: raw.file, name: raw.file.name, title: raw.title || raw.file.name.replace(/\.[^.]+$/, ""), mime: raw.file.type || MIME[extOf(raw.file.name)] || "", kind: kindOf(raw.file.name, raw.file.type) }
@@ -801,8 +811,8 @@
     function TOUCH() { return window.matchMedia && window.matchMedia("(hover: none)").matches; }
     function toggleMenu(m, force, focusEl) { const open = force == null ? m.hidden : force; m.hidden = !open; if (open) { (focusEl || rateRange).focus({ preventScroll: true }); if (focusEl) focusEl.scrollIntoView({ block: "nearest" }); } }
     onDoc("click", (e) => { if (!speedMenu.hidden && !e.target.closest(".ibp-speedmenu") && !e.target.closest("[data-act=speed]") && !e.target.closest(".ibp-vol")) speedMenu.hidden = true; });
-    fileIn.addEventListener("change", () => { addItems(Array.from(fileIn.files).map((f) => ({ file: f }))); fileIn.value = ""; });
-    folderIn.addEventListener("change", () => { const fs = Array.from(folderIn.files).filter((f) => kindOf(f.name, f.type)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })); addItems(fs.map((f) => ({ file: f }))); folderIn.value = ""; });
+    fileIn.addEventListener("change", () => { openNow(Array.from(fileIn.files)); fileIn.value = ""; });
+    folderIn.addEventListener("change", () => { const fs = Array.from(folderIn.files).filter((f) => kindOf(f.name, f.type)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })); openNow(fs); folderIn.value = ""; });
     ccIn.addEventListener("change", () => { attachCaptionFile(ccIn.files[0]); ccIn.value = ""; });
     // Drag & drop anywhere on the player.
     ["dragenter", "dragover"].forEach((ev) => root.addEventListener(ev, (e) => { e.preventDefault(); root.classList.add("ibp-dragover"); }));
@@ -815,7 +825,7 @@
         for (const it of Array.from(items)) { const en = it.webkitGetAsEntry && it.webkitGetAsEntry(); if (en) await walk(en); }
       } else if (e.dataTransfer) files.push(...Array.from(e.dataTransfer.files));
       const media = files.filter((f) => kindOf(f.name, f.type)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-      if (media.length) addItems(media.map((f) => ({ file: f }))); else showFlash("No playable files in the drop");
+      if (media.length) openNow(media); else showFlash("No playable files in the drop");
     });
     // Playlist re-ordering by drag.
     let dragFrom = -1;
@@ -876,13 +886,15 @@
     if (!document.pictureInPictureEnabled) pipBtn.hidden = true;
     if (o.items && o.items.length) addItems(o.items, { play: o.autoplay });
 
-    // Files handed to the installed app ("Open with").
+    // Files handed to the installed app ("Open with" / double-click). The manifest's launch_handler is
+    // "focus-existing", so a running window receives them here — v1.4.1: they play NOW (openNow), and the
+    // window is brought forward by the browser.
     if ("launchQueue" in window && window.launchQueue.setConsumer) {
-      try { window.launchQueue.setConsumer(async (p) => { const fs = []; for (const h of p.files || []) { try { fs.push(await h.getFile()); } catch {} } if (fs.length) addItems(fs.map((f) => ({ file: f }))); }); } catch {}
+      try { window.launchQueue.setConsumer(async (p) => { const fs = []; for (const h of p.files || []) { try { fs.push(await h.getFile()); } catch {} } if (fs.length) openNow(fs); }); } catch {}
     }
 
     return {
-      version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), sync: (list) => syncItems(list), play: () => (isPhoto() ? photoPlay() : video.play()), pause: () => (isPhoto() ? photoPause() : video.pause()),
+      version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), open: (list) => addItems(list, { now: true }), sync: (list) => syncItems(list), play: () => (isPhoto() ? photoPlay() : video.play()), pause: () => (isPhoto() ? photoPause() : video.pause()),
       setRate, seekTo, next, prev, get state() { return { ...st }; }, openFiles: () => fileIn.click(),
       destroy() { savePos(); ac.abort(); photoStop(); st.items.forEach(dropThumb); video.pause(); if (boost.src) { try { boost.src.disconnect(); boost.gain.disconnect(); boost.lim.disconnect(); boost.clip.disconnect(); } catch {} } video.removeAttribute("src"); try { video.load(); } catch {} LIVE.delete(video); if (synth && synth.speaking) synth.cancel(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; root.classList.remove("ibp"); },
     };
