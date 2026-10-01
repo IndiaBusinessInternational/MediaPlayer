@@ -1,4 +1,6 @@
-# IBI Media Player v1.3.1
+# IBI Media Player v1.4.0
+
+**Photo slideshow (v1.4.0)** — 1 Oct 2026, CEO: "add the photo mode slideshow". Photos now join the same playlist as audio and video, the standard of Windows Photos, Google Photos and VLC. JPG, PNG, WebP, GIF, AVIF, BMP and SVG open from Open, Folder, drag-and-drop or the installed app's Open with (the manifest now lists image types). Each photo shows for 3, 5, 10, 15 or 30 seconds (default 5, remembered), chosen in the new Photo slideshow section of the Speed and volume menu; on a photo the speed button shows that time. The seek bar is the photo's own clock, then the playlist moves on to the next item, photo or video, with shuffle and repeat. Space pauses the slideshow; ←/→ and J/L go to the previous/next photo, and browsing while paused stays paused; double-click is full screen. The photo is fitted on black (never cropped), turned upright from its camera data, and fades in; the playlist shows thumbnails (lazy-loaded) labelled Photo. iPhone HEIC photos are listed but Chrome and Edge on Windows cannot decode them, so a plain message says to save them as JPG.
 
 **The boost colour can be set by the host (v1.3.1)** — 1 Oct 2026. The boost zone is orange, but IBI Social Flow's own accent is orange too, so the two fills looked the same there. The boost colour is now `--ibp-boost` (and `--ibp-boost-ink` for text on it), taken from the host's `--boost` / `--boost-ink` or set inline; the default stays orange. Social Flow sets red.
 

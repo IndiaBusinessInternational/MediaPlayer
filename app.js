@@ -1,4 +1,4 @@
-/* IBI Media Player — the player library. v1.3.1 (1 Oct 2026; born v1.0.0 27 Sep 2026)
+/* IBI Media Player — the player library. v1.4.0 (1 Oct 2026: photo slideshow; born v1.0.0 27 Sep 2026)
  *
  * One file, no dependencies. `IBIPlayer.mount(root, options)` builds a complete audio/video
  * player inside `root` and returns a small API; `index.html` mounts it standalone, and the
@@ -10,6 +10,7 @@
  *   • speed 0.25× to 4× in 0.05 steps — presets 0.25 0.5 0.75 1 1.25 1.5 1.75 2 plus a
  *     custom slider — with the pitch preserved (switchable);
  *   • seek bar you can drag or tap, with a hover time, buffered ranges and a live position;
+ *   • photos (JPG, PNG, WebP, GIF, AVIF, BMP, SVG) as a slideshow in the same playlist, 3–30 s each;
  *   • ±10 s, previous/next, shuffle, repeat off/all/one, volume 0–200 % (boost + limiter), mute, captions (.vtt/.srt),
  *     picture-in-picture, full screen, a playlist with drag-and-drop and folder open;
  *   • keyboard: Space/K play, J/L ±10 s, ←/→ ±5 s, ↑/↓ volume, M mute, F full screen,
@@ -23,7 +24,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.3.1";
+  const VERSION = "1.4.0";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   /* v1.3.0 — VOLUME BOOST past 100 %, VLC's standard (CEO, 1 Oct 2026: "I want more audio … increase the
@@ -47,10 +48,16 @@
   const VIDEO_EXT = ["mp4", "m4v", "webm", "mkv", "mov", "ogv", "3gp", "3g2", "avi", "ts", "mts", "m2ts", "mpg", "mpeg", "wmv", "flv"];
   const AUDIO_EXT = ["mp3", "m4a", "m4b", "aac", "wav", "flac", "ogg", "oga", "opus", "weba", "wma", "aiff", "aif", "amr", "mid", "caf"];
   const CAPTION_EXT = ["vtt", "srt"];
+  // v1.4.0 — photos (slideshow). HEIC/HEIF are listed so they reach the playlist and get a plain "convert to JPG"
+  // message: Chrome and Edge on Windows cannot decode them (Safari can).
+  const IMAGE_EXT = ["jpg", "jpeg", "jfif", "pjpeg", "png", "apng", "webp", "gif", "avif", "bmp", "svg", "ico", "heic", "heif"];
+  const PHOTO_SECS = [3, 5, 10, 15, 30];
   const MIME = { mp4: "video/mp4", m4v: "video/mp4", webm: "video/webm", mkv: "video/x-matroska", mov: "video/quicktime", ogv: "video/ogg", "3gp": "video/3gpp",
     avi: "video/x-msvideo", ts: "video/mp2t", mpg: "video/mpeg", mpeg: "video/mpeg", wmv: "video/x-ms-wmv", flv: "video/x-flv",
     mp3: "audio/mpeg", m4a: "audio/mp4", m4b: "audio/mp4", aac: "audio/aac", wav: "audio/wav", flac: "audio/flac", ogg: "audio/ogg", oga: "audio/ogg",
-    opus: 'audio/ogg; codecs="opus"', weba: "audio/webm", wma: "audio/x-ms-wma", aiff: "audio/aiff", aif: "audio/aiff", amr: "audio/amr", mid: "audio/midi", caf: "audio/x-caf" };
+    opus: 'audio/ogg; codecs="opus"', weba: "audio/webm", wma: "audio/x-ms-wma", aiff: "audio/aiff", aif: "audio/aiff", amr: "audio/amr", mid: "audio/midi", caf: "audio/x-caf",
+    jpg: "image/jpeg", jpeg: "image/jpeg", jfif: "image/jpeg", pjpeg: "image/jpeg", png: "image/png", apng: "image/apng", webp: "image/webp", gif: "image/gif",
+    avif: "image/avif", bmp: "image/bmp", svg: "image/svg+xml", ico: "image/x-icon", heic: "image/heic", heif: "image/heif" };
   const LS = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch { return null; } };
   const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
   const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -58,8 +65,9 @@
   const kindOf = (name, mime) => {
     if (mime && mime.startsWith("video/")) return "video";
     if (mime && mime.startsWith("audio/")) return "audio";
+    if (mime && mime.startsWith("image/")) return "image";
     const e = extOf(name);
-    return VIDEO_EXT.includes(e) ? "video" : AUDIO_EXT.includes(e) ? "audio" : CAPTION_EXT.includes(e) ? "caption" : "";
+    return VIDEO_EXT.includes(e) ? "video" : AUDIO_EXT.includes(e) ? "audio" : IMAGE_EXT.includes(e) ? "image" : CAPTION_EXT.includes(e) ? "caption" : "";
   };
   function fmtTime(s) {
     if (!isFinite(s) || s < 0) s = 0;
@@ -97,6 +105,7 @@
     close: '<svg viewBox="0 0 24 24"><path d="M19 6.4 17.6 5 12 10.6 6.4 5 5 6.4l5.6 5.6L5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4-5.6-5.6z"/></svg>',
     trash: '<svg viewBox="0 0 24 24"><path d="M6 7h12l-1 14H7zm3-4h6l1 2h4v2H4V5h4z"/></svg>',
     music: '<svg viewBox="0 0 24 24"><path d="M12 3v10.6A4 4 0 1 0 14 17V7h4V3z"/></svg>',
+    photo: '<svg viewBox="0 0 24 24"><path d="M21 19V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2zM8.5 13.5l2.5 3 3.5-4.5 4.5 6H5z"/></svg>',
     film: '<svg viewBox="0 0 24 24"><path d="M4 4h16v16H4zm2 2v2h2V6zm0 4v2h2v-2zm0 4v2h2v-2zm10-8v2h2V6zm0 4v2h2v-2zm0 4v2h2v-2zM10 6v12h4V6z"/></svg>',
     read: '<svg viewBox="0 0 24 24"><path d="M4 5h11v2H4zm0 4h11v2H4zm0 4h7v2H4zm0 4h7v2H4zm13.5-6a4.5 4.5 0 0 1 0 6.4l-1.4-1.4a2.5 2.5 0 0 0 0-3.6zm2.8-2.8a8.5 8.5 0 0 1 0 12l-1.4-1.4a6.5 6.5 0 0 0 0-9.2z"/></svg>',
   };
@@ -115,11 +124,12 @@
       <div class="ibp-main">
         <div class="ibp-stage" tabindex="0" aria-label="Player. Space plays or pauses, arrows seek.">
           <video playsinline preload="metadata"></video>
+          <img class="ibp-photo" alt="" decoding="async" draggable="false">
           <div class="ibp-art"><div class="ibp-art-ico">${ICON.music}</div><div class="ibp-art-title"></div><div class="ibp-art-sub"></div></div>
           <div class="ibp-empty">
             <div class="ibp-empty-ico">${ICON.open}</div>
-            <div class="ibp-empty-t">Open audio or video files</div>
-            <div class="ibp-empty-s">Drop files here, or use Open. MP4, WebM, MKV, MOV, MP3, M4A, WAV, FLAC, OGG and more.</div>
+            <div class="ibp-empty-t">Open audio, video or photo files</div>
+            <div class="ibp-empty-s">Drop files or a folder here, or use Open. MP4, WebM, MKV, MOV, MP3, M4A, WAV, FLAC, OGG, and photos (JPG, PNG, WebP, GIF, AVIF) as a slideshow.</div>
             <div class="ibp-empty-b"><button type="button" class="ibp-btn ibp-btn-primary" data-act="open">Open files</button><button type="button" class="ibp-btn" data-act="open-folder">Open folder</button></div>
           </div>
           <div class="ibp-msg" hidden></div>
@@ -171,6 +181,10 @@
             <div class="ibp-custom-scale"><span>0</span><span>100%</span><span>${VOL_MAX * 100}%</span></div>
             <div class="ibp-volnote">Above 100% is a boost for quiet recordings. A limiter stops the loud parts from crackling. Turn it down for headphones.</div>
           </div>
+          <div class="ibp-photosec">
+            <div class="ibp-custom-h"><span>Photo slideshow · each photo shows for</span><b class="ibp-photosec-val">5 s</b></div>
+            <div class="ibp-photochips">${PHOTO_SECS.map((s) => `<button type="button" class="ibp-chip" data-psec="${s}">${s} s</button>`).join("")}</div>
+          </div>
         </div>
         <div class="ibp-menu ibp-readmenu" hidden role="dialog" aria-label="Read text aloud">
           <div class="ibp-menu-h">Read text aloud <button type="button" class="ibp-ic ibp-sm" data-act="closeread" aria-label="Close">${ICON.close}</button></div>
@@ -198,13 +212,14 @@
         <ol class="ibp-items"></ol>
         <div class="ibp-list-empty">Nothing here yet.</div>
       </aside>
-      <input type="file" class="ibp-file" multiple hidden accept="${o.accept || [...VIDEO_EXT, ...AUDIO_EXT, ...CAPTION_EXT].map((e) => "." + e).join(",") + ",video/*,audio/*"}">
+      <input type="file" class="ibp-file" multiple hidden accept="${o.accept || [...VIDEO_EXT, ...AUDIO_EXT, ...IMAGE_EXT, ...CAPTION_EXT].map((e) => "." + e).join(",") + ",video/*,audio/*,image/*"}">
       <input type="file" class="ibp-folder" multiple hidden webkitdirectory>
       <input type="file" class="ibp-ccfile" hidden accept=".vtt,.srt,text/vtt">
       <input type="file" class="ibp-txtfile" hidden accept=".txt,.md,text/plain">`;
 
     const $ = (s) => root.querySelector(s);
     const $$ = (s) => Array.from(root.querySelectorAll(s));
+    const photo = $(".ibp-photo"), photoSecVal = $(".ibp-photosec-val");
     const stage = $(".ibp-stage"), video = $("video"), art = $(".ibp-art"), empty = $(".ibp-empty"), msg = $(".ibp-msg"), flash = $(".ibp-flash");
     const seek = $(".ibp-seek"), prog = $(".ibp-prog"), buf = $(".ibp-buf"), knob = $(".ibp-knob"), tip = $(".ibp-tip");
     const cur = $(".ibp-cur"), dur = $(".ibp-dur"), playBtns = $$("[data-act=play]"), speedLabel = $(".ibp-speed-label");
@@ -253,7 +268,66 @@
       items: [], index: -1, repeat: LS("ibp:repeat") || "off", shuffle: false, rate: Number(LS("ibp:rate")) || 1,
       volume: LS("ibp:volume") == null ? 1 : Number(LS("ibp:volume")), muted: LS("ibp:muted") === "1",
       pitch: LS("ibp:pitch") !== "0", dragging: false, blobUrl: "", ccUrl: "", hideTimer: 0, saveTimer: 0,
+      photoSec: PHOTO_SECS.includes(Number(LS("ibp:photoSec"))) ? Number(LS("ibp:photoSec")) : 5,
     };
+
+    /* v1.4.0 — PHOTO SLIDESHOW (CEO, 1 Oct 2026: "add the photo mode slideshow"). The standard of Windows Photos,
+     * Google Photos and VLC: photos sit in the same playlist as audio and video; each shows for a set time
+     * (3/5/10/15/30 s, default 5, remembered) and the playlist moves on — shuffle and repeat included. Space
+     * pauses, ←/→ and J/L go to the previous/next photo, the seek bar is the photo's own clock, double-click
+     * is full screen. The photo is fitted (never cropped), turned upright from its camera data by the browser,
+     * and fades in. A clock replaces the <video>'s: ph.elapsed seconds, ticking only while ph.playing. */
+    const ph = { playing: false, elapsed: 0, t0: 0, timer: 0 };
+    const isPhoto = () => { const it = st.items[st.index]; return !!it && it.kind === "image"; };
+    const playingNow = () => (isPhoto() ? ph.playing : !video.paused);
+    const durNow = () => (isPhoto() ? st.photoSec : video.duration);
+    function photoUrl(it) { if (!it.thumb) it.thumb = it.file ? URL.createObjectURL(it.file) : it.url; return it.thumb; }
+    function uiPlaying(on) {
+      playBtns.forEach((b) => { b.innerHTML = on ? ICON.pause : ICON.play; b.setAttribute("aria-label", on ? "Pause (Space)" : "Play (Space)"); });
+      root.classList.toggle("ibp-playing", on);
+      if (on) scheduleHide(); else root.classList.remove("ibp-hide");
+    }
+    function photoTick() {
+      ph.elapsed = (performance.now() - ph.t0) / 1000;
+      if (ph.elapsed >= st.photoSec) { ph.elapsed = st.photoSec; paintPhoto(); photoEnded(); return; }
+      paintPhoto();
+    }
+    function photoPlay() {
+      if (!isPhoto()) return;
+      LIVE.forEach((v) => { if (!v.paused) v.pause(); });
+      if (synth && synth.speaking) { synth.cancel(); root.classList.remove("ibp-reading"); }
+      if (ph.elapsed >= st.photoSec) ph.elapsed = 0;
+      ph.playing = true; ph.t0 = performance.now() - ph.elapsed * 1000;
+      clearInterval(ph.timer); ph.timer = setInterval(photoTick, 100);
+      uiPlaying(true);
+    }
+    function photoPause() { ph.playing = false; clearInterval(ph.timer); ph.timer = 0; uiPlaying(false); paintPhoto(); }
+    function photoStop() { ph.playing = false; clearInterval(ph.timer); ph.timer = 0; ph.elapsed = 0; }
+    function photoEnded() {
+      if (st.repeat === "one") { ph.elapsed = 0; ph.t0 = performance.now(); return; }
+      const j = nextIndex(1);
+      if (j >= 0) load(j, true); else photoPause();   // end of the list with repeat off: stay on the last photo
+    }
+    function paintPhoto() {
+      const d = st.photoSec, t = Math.min(ph.elapsed, d), f = t / d;
+      prog.style.width = (f * 100) + "%"; knob.style.left = (f * 100) + "%"; buf.style.width = "100%";
+      cur.textContent = fmtTime(t); dur.textContent = fmtTime(d);
+      seek.setAttribute("aria-valuenow", String(Math.round(f * 100))); seek.setAttribute("aria-valuetext", `${Math.floor(t)} of ${d} seconds of this photo`);
+      if (o.onTime) o.onTime(t, d);
+    }
+    function setPhotoSec(s, announce) {
+      st.photoSec = PHOTO_SECS.includes(s) ? s : 5; LS("ibp:photoSec", String(st.photoSec));
+      if (ph.playing) ph.t0 = performance.now() - Math.min(ph.elapsed, st.photoSec) * 1000;
+      updatePhotoUI();
+      if (announce) showFlash(`Each photo: ${st.photoSec} s`);
+    }
+    function updatePhotoUI() {
+      photoSecVal.textContent = st.photoSec + " s";
+      $$(".ibp-chip[data-psec]").forEach((b) => b.classList.toggle("ibp-on", Number(b.dataset.psec) === st.photoSec));
+      // On a photo the speed button shows the slide time instead (the speed of a still picture means nothing).
+      speedLabel.textContent = isPhoto() ? st.photoSec + " s" : (fmtRate(st.rate) === "Normal" ? "1×" : fmtRate(st.rate));
+      if (isPhoto()) paintPhoto();
+    }
 
     /* ---------------------------------- items ---------------------------------- */
     function keyOf(it) { return it.file ? `${it.file.name}|${it.file.size}|${it.file.lastModified}` : `url|${it.url}`; }
@@ -266,7 +340,7 @@
         st.items.push(it); added.push(it);
       }
       renderList();
-      if (added.length && play && (st.index < 0 || video.paused && !video.currentTime)) load(st.items.indexOf(added[0]), true);
+      if (added.length && play && (st.index < 0 || !playingNow() && !(isPhoto() ? ph.elapsed : video.currentTime))) load(st.items.indexOf(added[0]), true);
       else if (st.index < 0 && st.items.length) load(0, false);
       return added.length;
     }
@@ -307,6 +381,22 @@
       if (st.blobUrl) { URL.revokeObjectURL(st.blobUrl); st.blobUrl = ""; }
       clearCaptions();
       hideMsg();
+      photoStop();
+      if (it.kind === "image") {
+        // v1.4.0 — a photo: empty the <video> (its pause event is ignored in photo mode), show the picture, start the clock.
+        if (!video.paused) video.pause();
+        if (video.getAttribute("src")) { video.removeAttribute("src"); try { video.load(); } catch {} }
+        root.classList.remove("ibp-audio"); root.classList.add("ibp-photo-mode");
+        art.hidden = true; empty.hidden = true;
+        photo.classList.remove("ibp-shown"); photo.alt = it.title;
+        photo.src = photoUrl(it);
+        if (/^(heic|heif)$/.test(extOf(it.name))) showMsg(`${it.name} is an iPhone HEIC photo. Chrome and Edge on Windows cannot show HEIC — save it as JPG (Photos app: … > Save as) and open it again.`);
+        renderList(); updatePhotoUI(); paintPhoto(); setMediaSession(it);
+        if (play) photoPlay(); else uiPlaying(false);
+        if (o.onChange) o.onChange(it, i);
+        return;
+      }
+      root.classList.remove("ibp-photo-mode"); photo.removeAttribute("src"); photo.classList.remove("ibp-shown");
       const src = it.file ? (st.blobUrl = URL.createObjectURL(it.file)) : it.url;
       // Say early when the browser has no decoder for this container.
       if (it.mime && video.canPlayType(it.mime) === "" && !/matroska|quicktime|x-msvideo|mp2t|ms-wmv|x-flv|mpeg$/.test(it.mime)) {
@@ -327,6 +417,7 @@
       applyRate(st.rate);
       video.playbackRate = st.rate;
       renderList();
+      updatePhotoUI();   // puts the speed label back from "5 s" to the rate
       setMediaSession(it);
       if (play) video.play().catch(() => {});
       if (o.onChange) o.onChange(it, i);
@@ -348,33 +439,48 @@
     }
     function removeItem(i) {
       const wasCurrent = i === st.index;
-      st.items.splice(i, 1);
-      if (wasCurrent) { video.pause(); video.removeAttribute("src"); video.load(); st.index = -1; art.hidden = true; if (st.items.length) load(Math.min(i, st.items.length - 1), false); else { empty.hidden = false; setTitle(""); } }
+      const [gone] = st.items.splice(i, 1);
+      dropThumb(gone);
+      if (wasCurrent) { photoStop(); uiPlaying(false); clearStage(); video.pause(); video.removeAttribute("src"); video.load(); st.index = -1; art.hidden = true; if (st.items.length) load(Math.min(i, st.items.length - 1), false); else { empty.hidden = false; setTitle(""); } }
       else if (i < st.index) st.index--;
       renderList();
     }
     function renderList() {
       listCount.textContent = st.items.length ? `${st.items.length}` : "";
       listEmpty.hidden = st.items.length > 0;
+      // v1.4.0 — a photo shows its own thumbnail (lazy: only the rows on screen are decoded) and "Photo".
       itemsEl.innerHTML = st.items.map((it, i) => `<li class="ibp-item${i === st.index ? " ibp-current" : ""}" data-i="${i}" draggable="true">
-        <span class="ibp-item-ico">${it.kind === "audio" ? ICON.music : ICON.film}</span>
-        <span class="ibp-item-t"><span class="ibp-item-title">${esc(it.title)}</span><span class="ibp-item-sub">${esc(it.name !== it.title ? it.name : (it.kind === "audio" ? "Audio" : "Video"))}${it.duration ? " · " + fmtTime(it.duration) : ""}</span></span>
+        <span class="ibp-item-ico${it.kind === "image" ? " ibp-item-thumb" : ""}">${it.kind === "image" ? `<img src="${esc(photoUrl(it))}" alt="" loading="lazy" decoding="async" draggable="false">` : it.kind === "audio" ? ICON.music : ICON.film}</span>
+        <span class="ibp-item-t"><span class="ibp-item-title">${esc(it.title)}</span><span class="ibp-item-sub">${it.kind === "image" ? "Photo" + (it.name !== it.title ? " · " + esc(it.name) : "") : esc(it.name !== it.title ? it.name : (it.kind === "audio" ? "Audio" : "Video"))}${it.duration && it.kind !== "image" ? " · " + fmtTime(it.duration) : ""}</span></span>
         <button type="button" class="ibp-ic ibp-sm ibp-item-rm" data-rm="${i}" aria-label="Remove from playlist">${ICON.trash}</button></li>`).join("");
       const c = itemsEl.querySelector(".ibp-current"); if (c && listEl.classList.contains("ibp-list-open")) c.scrollIntoView({ block: "nearest" });
       setTitle(st.items[st.index] ? st.items[st.index].title : "");
     }
     function setTitle(t) { if (o.onTitle) o.onTitle(t); }
+    function dropThumb(it) { if (it && it.file && it.thumb) { URL.revokeObjectURL(it.thumb); it.thumb = ""; } }
+    function clearStage() { root.classList.remove("ibp-photo-mode"); photo.removeAttribute("src"); photo.classList.remove("ibp-shown"); }
 
     /* --------------------------------- playback -------------------------------- */
-    function togglePlay() { if (st.index < 0) { if (st.items.length) load(0, true); else fileIn.click(); return; } if (video.paused) video.play().catch(() => {}); else video.pause(); }
-    function seekBy(d) { if (!isFinite(video.duration)) return; video.currentTime = clamp(video.currentTime + d, 0, video.duration); showFlash(d > 0 ? `+${d} s` : `${d} s`); }
-    function seekTo(frac) { if (!isFinite(video.duration)) return; video.currentTime = clamp(frac, 0, 1) * video.duration; }
+    function togglePlay() {
+      if (st.index < 0) { if (st.items.length) load(0, true); else fileIn.click(); return; }
+      if (isPhoto()) { if (ph.playing) { photoPause(); showFlash("Slideshow paused"); } else photoPlay(); return; }
+      if (video.paused) video.play().catch(() => {}); else video.pause();
+    }
+    // On a photo, "skip" means the previous/next item — what every photo viewer does with ← → and J/L.
+    function seekBy(d) {
+      if (isPhoto()) { if (d > 0) next(); else prev(); return; }
+      if (!isFinite(video.duration)) return; video.currentTime = clamp(video.currentTime + d, 0, video.duration); showFlash(d > 0 ? `+${d} s` : `${d} s`);
+    }
+    function seekTo(frac) {
+      if (isPhoto()) { ph.elapsed = clamp(frac, 0, 1) * st.photoSec; ph.t0 = performance.now() - ph.elapsed * 1000; paintPhoto(); return; }
+      if (!isFinite(video.duration)) return; video.currentTime = clamp(frac, 0, 1) * video.duration;
+    }
     function applyRate(r) {
       r = roundRate(r);
       st.rate = r;
       video.playbackRate = r;
       try { video.preservesPitch = st.pitch; video.mozPreservesPitch = st.pitch; video.webkitPreservesPitch = st.pitch; } catch {}
-      speedLabel.textContent = fmtRate(r) === "Normal" ? "1×" : fmtRate(r);
+      if (!isPhoto()) speedLabel.textContent = fmtRate(r) === "Normal" ? "1×" : fmtRate(r);   // v1.4.0: a photo shows its slide time there
       customVal.textContent = fmtRate(r) === "Normal" ? "1×" : fmtRate(r);
       rateRange.value = String(r);
       $$(".ibp-chip[data-rate]").forEach((b) => b.classList.toggle("ibp-on", Math.abs(Number(b.dataset.rate) - r) < 0.001));
@@ -526,8 +632,9 @@
       if (!("mediaSession" in navigator)) return;
       try {
         navigator.mediaSession.metadata = new MediaMetadata({ title: it.title, artist: o.title || "IBI Media Player", artwork: it.poster ? [{ src: it.poster }] : [] });
-        navigator.mediaSession.setActionHandler("play", () => video.play());
-        navigator.mediaSession.setActionHandler("pause", () => video.pause());
+        navigator.mediaSession.metadata.artwork = it.kind === "image" ? [{ src: photoUrl(it) }] : navigator.mediaSession.metadata.artwork;
+        navigator.mediaSession.setActionHandler("play", () => (isPhoto() ? photoPlay() : video.play()));
+        navigator.mediaSession.setActionHandler("pause", () => (isPhoto() ? photoPause() : video.pause()));
         navigator.mediaSession.setActionHandler("seekbackward", () => seekBy(-10));
         navigator.mediaSession.setActionHandler("seekforward", () => seekBy(10));
         navigator.mediaSession.setActionHandler("previoustrack", () => prev());
@@ -535,8 +642,10 @@
         navigator.mediaSession.setActionHandler("seekto", (d) => { if (d.seekTime != null) video.currentTime = d.seekTime; });
       } catch {}
     }
-    function next() { const j = nextIndex(1); if (j >= 0) load(j, true); else { video.pause(); } }
-    function prev() { if (video.currentTime > 3) { video.currentTime = 0; return; } const j = nextIndex(-1); if (j >= 0) load(j, true); }
+    // Browsing photos while the slideshow is paused keeps it paused (Windows Photos / Google Photos behaviour).
+    const keepPlaying = () => (isPhoto() ? ph.playing : true);
+    function next() { const j = nextIndex(1); if (j >= 0) load(j, keepPlaying()); else if (isPhoto()) { photoPause(); showFlash("Last item"); } else { video.pause(); } }
+    function prev() { if (!isPhoto() && video.currentTime > 3) { video.currentTime = 0; return; } const j = nextIndex(-1); if (j >= 0) load(j, keepPlaying()); }
 
     /* -------------------------------- read aloud -------------------------------- */
     /* v1.1.0 (CEO, 27 Sep 2026: "provide as many voices as possible, both female and male, so
@@ -592,13 +701,22 @@
     /* ---------------------------------- events --------------------------------- */
     LIVE.add(video);
     video.addEventListener("play", () => { LIVE.forEach((v) => { if (v !== video && !v.paused) v.pause(); }); if (!root.isConnected) { video.pause(); return; }  if (synth && synth.speaking) { synth.cancel(); root.classList.remove("ibp-reading"); } playBtns.forEach((b) => { b.innerHTML = ICON.pause; b.setAttribute("aria-label", "Pause (Space)"); }); root.classList.add("ibp-playing"); scheduleHide(); });
-    video.addEventListener("pause", () => { playBtns.forEach((b) => { b.innerHTML = ICON.play; b.setAttribute("aria-label", "Play (Space)"); }); root.classList.remove("ibp-playing"); root.classList.remove("ibp-hide"); savePos(); });
+    video.addEventListener("pause", () => { if (isPhoto()) return; playBtns.forEach((b) => { b.innerHTML = ICON.play; b.setAttribute("aria-label", "Play (Space)"); }); root.classList.remove("ibp-playing"); root.classList.remove("ibp-hide"); savePos(); });
+    // v1.4.0 — the photo fades in once decoded; a picture the browser cannot decode says so and the slideshow moves on.
+    photo.addEventListener("load", () => { photo.classList.add("ibp-shown"); });
+    photo.addEventListener("error", () => {
+      const it = st.items[st.index]; if (!it || it.kind !== "image" || !photo.getAttribute("src")) return;
+      if (!/^(heic|heif)$/.test(extOf(it.name))) showMsg(`Cannot show ${it.name}: this browser cannot open this picture. JPG, PNG, WebP, GIF and AVIF work everywhere.`);
+    });
+    photo.addEventListener("click", () => togglePlay());
+    photo.addEventListener("dblclick", () => toggleFull());
     video.addEventListener("ended", () => { savePos(); if (st.repeat !== "one") next(); });
     video.addEventListener("timeupdate", () => { if (!st.dragging) paint(); if (!st.saveTimer) st.saveTimer = setTimeout(() => { st.saveTimer = 0; savePos(); }, 5000); });
     video.addEventListener("durationchange", () => { const it = st.items[st.index]; if (it && isFinite(video.duration)) { it.duration = video.duration; const li = itemsEl.querySelector(`.ibp-item[data-i="${st.index}"] .ibp-item-sub`); if (li && !/·/.test(li.textContent)) li.textContent += " · " + fmtTime(video.duration); } paint(); });
     video.addEventListener("progress", paintBuffer);
     video.addEventListener("loadedmetadata", () => { paint(); const it = st.items[st.index]; if (it && it.kind === "video" && video.videoWidth === 0 && video.audioTracks !== undefined) { /* audio-only container */ } });
     video.addEventListener("error", () => {
+      if (isPhoto()) return;
       const e = video.error; const it = st.items[st.index];
       const why = !e ? "" : e.code === 4 ? "the browser has no decoder for this file's format or codec" : e.code === 3 ? "the file is damaged or its codec is not supported" : e.code === 2 ? "the file could not be read" : "playback was stopped";
       if (boost.src && video.crossOrigin) { showMsg(`Cannot play ${it ? it.name : "this file"}: its website does not allow it while the volume boost is in use. Reload the page and play it at 100% or less.`); return; }
@@ -617,6 +735,7 @@
     art.addEventListener("click", () => togglePlay());
 
     function paint() {
+      if (isPhoto()) { paintPhoto(); return; }
       const d = video.duration, t = video.currentTime;
       const f = isFinite(d) && d > 0 ? t / d : 0;
       prog.style.width = (f * 100) + "%"; knob.style.left = (f * 100) + "%";
@@ -629,8 +748,9 @@
     }
     // Seek bar: pointer events so a finger and a mouse behave the same; the knob follows while dragging.
     const fracAt = (clientX) => { const r = seek.getBoundingClientRect(); return clamp((clientX - r.left) / r.width, 0, 1); };
-    seek.addEventListener("pointerdown", (e) => { if (!isFinite(video.duration)) return; st.dragging = true; seek.setPointerCapture(e.pointerId); const f = fracAt(e.clientX); prog.style.width = knob.style.left = (f * 100) + "%"; cur.textContent = fmtTime(f * video.duration); tip.textContent = fmtTime(f * video.duration); tip.style.left = (f * 100) + "%"; root.classList.add("ibp-scrub"); });
-    seek.addEventListener("pointermove", (e) => { const f = fracAt(e.clientX); tip.textContent = isFinite(video.duration) ? fmtTime(f * video.duration) : ""; tip.style.left = (f * 100) + "%"; if (st.dragging) { prog.style.width = knob.style.left = (f * 100) + "%"; cur.textContent = fmtTime(f * video.duration); } });
+    // v1.4.0 — durNow() is the photo's slide time on a photo, the media duration otherwise.
+    seek.addEventListener("pointerdown", (e) => { const D = durNow(); if (!isFinite(D)) return; st.dragging = true; seek.setPointerCapture(e.pointerId); const f = fracAt(e.clientX); prog.style.width = knob.style.left = (f * 100) + "%"; cur.textContent = fmtTime(f * D); tip.textContent = fmtTime(f * D); tip.style.left = (f * 100) + "%"; root.classList.add("ibp-scrub"); });
+    seek.addEventListener("pointermove", (e) => { const f = fracAt(e.clientX), D = durNow(); tip.textContent = isFinite(D) ? fmtTime(f * D) : ""; tip.style.left = (f * 100) + "%"; if (st.dragging) { prog.style.width = knob.style.left = (f * 100) + "%"; cur.textContent = fmtTime(f * D); } });
     seek.addEventListener("pointerup", (e) => { if (!st.dragging) return; st.dragging = false; root.classList.remove("ibp-scrub"); seekTo(fracAt(e.clientX)); });
     seek.addEventListener("pointercancel", () => { st.dragging = false; root.classList.remove("ibp-scrub"); });
     seek.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") { seekBy(-5); e.preventDefault(); } if (e.key === "ArrowRight") { seekBy(5); e.preventDefault(); } });
@@ -642,6 +762,7 @@
     root.addEventListener("click", (e) => {
       const chip = e.target.closest(".ibp-chip[data-rate]"); if (chip) { setRate(Number(chip.dataset.rate)); return; }
       const vch = e.target.closest(".ibp-chip[data-vol]"); if (vch) { setVolume(Number(vch.dataset.vol), "key"); return; }
+      const pch = e.target.closest(".ibp-chip[data-psec]"); if (pch) { setPhotoSec(Number(pch.dataset.psec), true); return; }
       const vst = e.target.closest(".ibp-vstep"); if (vst) { setVolume(st.volume + Number(vst.dataset.vstep), "key"); return; }
       const step = e.target.closest(".ibp-step"); if (step) { setRate(st.rate + Number(step.dataset.step)); return; }
       const rm = e.target.closest("[data-rm]"); if (rm) { removeItem(Number(rm.dataset.rm)); return; }
@@ -657,7 +778,7 @@
       // (with Mute in it); with a mouse it mutes, as before.
       else if (act === "mute" && TOUCH() && !b.closest(".ibp-menu")) { toggleMenu(speedMenu, speedMenu.hidden, menuVol); }
       else if (act === "mute") { setMuted(!st.muted); showFlash(volText()); }
-      else if (act === "speed") toggleMenu(speedMenu);
+      else if (act === "speed") toggleMenu(speedMenu, null, isPhoto() ? $(".ibp-chip[data-psec].ibp-on") : null);
       else if (act === "closemenu") toggleMenu(speedMenu, false);
       else if (act === "read") { readMenu.hidden = !readMenu.hidden; if (!readMenu.hidden) { speedMenu.hidden = true; loadVoices(); readText.focus({ preventScroll: true }); } }
       else if (act === "closeread") readMenu.hidden = true;
@@ -675,7 +796,7 @@
       else if (act === "open") fileIn.click();
       else if (act === "open-folder") folderIn.click();
       else if (act === "open-cc") ccIn.click();
-      else if (act === "clear") { video.pause(); video.removeAttribute("src"); video.load(); st.items = []; st.index = -1; art.hidden = true; empty.hidden = false; renderList(); }
+      else if (act === "clear") { photoStop(); uiPlaying(false); clearStage(); hideMsg(); video.pause(); video.removeAttribute("src"); video.load(); st.items.forEach(dropThumb); st.items = []; st.index = -1; art.hidden = true; empty.hidden = false; renderList(); updatePhotoUI(); }
     });
     function TOUCH() { return window.matchMedia && window.matchMedia("(hover: none)").matches; }
     function toggleMenu(m, force, focusEl) { const open = force == null ? m.hidden : force; m.hidden = !open; if (open) { (focusEl || rateRange).focus({ preventScroll: true }); if (focusEl) focusEl.scrollIntoView({ block: "nearest" }); } }
@@ -728,6 +849,7 @@
       else if (k === "p" || k === "P") prev();
       else if (k === ">" ) setRate(st.rate + 0.25);
       else if (k === "<") setRate(st.rate - 0.25);
+      else if ((k === "." || k === ",") && isPhoto()) { /* frame step means nothing on a still photo */ }
       else if (k === "." && e.shiftKey === false && video.paused) { video.currentTime = Math.min(video.duration || 0, video.currentTime + 1 / 30); }
       else if (k === "," && video.paused) { video.currentTime = Math.max(0, video.currentTime - 1 / 30); }
       else if (k === "Home") seekTo(0);
@@ -742,14 +864,14 @@
     onDoc("keydown", (e) => { if (e.altKey && (e.key === "." || e.key === ">")) { setRate(st.rate + 0.05); e.preventDefault(); } if (e.altKey && (e.key === "," || e.key === "<")) { setRate(st.rate - 0.05); e.preventDefault(); } });
 
     // Controls hide while playing video and the pointer is still.
-    function scheduleHide() { clearTimeout(st.hideTimer); root.classList.remove("ibp-hide"); if (!video.paused && !root.classList.contains("ibp-audio")) st.hideTimer = setTimeout(() => { if (speedMenu.hidden) root.classList.add("ibp-hide"); }, 2600); }
+    function scheduleHide() { clearTimeout(st.hideTimer); root.classList.remove("ibp-hide"); if (playingNow() && !root.classList.contains("ibp-audio")) st.hideTimer = setTimeout(() => { if (speedMenu.hidden) root.classList.add("ibp-hide"); }, 2600); }
     ["pointermove", "pointerdown", "keydown", "touchstart"].forEach((ev) => root.addEventListener(ev, scheduleHide, { passive: true }));
     onDoc("fullscreenchange", () => { const on = document.fullscreenElement === root; root.classList.toggle("ibp-fs", on); fullBtn.innerHTML = on ? ICON.unfull : ICON.full; });
     onWin("beforeunload", savePos);
     onDoc("visibilitychange", () => { if (document.hidden) savePos(); });
 
     // Initial state.
-    setVolume(st.volume, "init"); setMuted(st.muted); pitchBox.checked = st.pitch; applyRate(st.rate); updateRepeat();
+    setVolume(st.volume, "init"); setMuted(st.muted); pitchBox.checked = st.pitch; applyRate(st.rate); updateRepeat(); updatePhotoUI();
     setListW(savedW(), false); requestAnimationFrame(() => setListW(savedW(), false));   // again once laid out
     if (!document.pictureInPictureEnabled) pipBtn.hidden = true;
     if (o.items && o.items.length) addItems(o.items, { play: o.autoplay });
@@ -760,9 +882,9 @@
     }
 
     return {
-      version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), sync: (list) => syncItems(list), play: () => video.play(), pause: () => video.pause(),
+      version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), sync: (list) => syncItems(list), play: () => (isPhoto() ? photoPlay() : video.play()), pause: () => (isPhoto() ? photoPause() : video.pause()),
       setRate, seekTo, next, prev, get state() { return { ...st }; }, openFiles: () => fileIn.click(),
-      destroy() { savePos(); ac.abort(); video.pause(); if (boost.src) { try { boost.src.disconnect(); boost.gain.disconnect(); boost.lim.disconnect(); boost.clip.disconnect(); } catch {} } video.removeAttribute("src"); try { video.load(); } catch {} LIVE.delete(video); if (synth && synth.speaking) synth.cancel(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; root.classList.remove("ibp"); },
+      destroy() { savePos(); ac.abort(); photoStop(); st.items.forEach(dropThumb); video.pause(); if (boost.src) { try { boost.src.disconnect(); boost.gain.disconnect(); boost.lim.disconnect(); boost.clip.disconnect(); } catch {} } video.removeAttribute("src"); try { video.load(); } catch {} LIVE.delete(video); if (synth && synth.speaking) synth.cancel(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; root.classList.remove("ibp"); },
     };
   }
 

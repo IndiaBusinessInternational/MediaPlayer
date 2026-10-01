@@ -70,6 +70,16 @@
         ],
         "application/x-subrip": [
           ".srt"
+        ],
+        "image/*": [
+          ".jpg",
+          ".jpeg",
+          ".jfif",
+          ".png",
+          ".webp",
+          ".gif",
+          ".avif",
+          ".bmp"
         ]
       }
     }

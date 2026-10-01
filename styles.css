@@ -13,6 +13,13 @@
  * and the controls went with it (Social Flow, 30 Sep 2026: "too big to play"). Absolute = the stage's box. */
 .ibp-stage video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: block; background: #000; }
 .ibp-audio .ibp-stage video { position: absolute; inset: 0; opacity: 0; pointer-events: none; }
+/* v1.4.0 — PHOTO SLIDESHOW: the picture is fitted inside the stage (never cropped), on black, and fades in once
+ * decoded. The browser turns it upright from its camera (EXIF) data. In photo mode the empty <video> is hidden. */
+.ibp-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; display: none; background: #000; opacity: 0; transition: opacity .45s ease; image-orientation: from-image; user-select: none; -webkit-user-drag: none; }
+.ibp-photo-mode .ibp-photo { display: block; }
+.ibp-photo-mode .ibp-photo.ibp-shown { opacity: 1; }
+.ibp-photo-mode .ibp-stage video { visibility: hidden; }
+@media (prefers-reduced-motion: reduce) { .ibp-photo { transition: none; } }
 .ibp-art { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; gap: 6px; padding: 24px; background: radial-gradient(60% 50% at 50% 40%, #16324a 0%, #0a0f16 70%); cursor: pointer; }
 .ibp-art[hidden] { display: none; }
 .ibp-art-ico { width: 96px; height: 96px; margin: 0 auto 8px; border-radius: 24px; background: #ffffff12; display: grid; place-items: center; }
@@ -121,6 +128,10 @@
 .ibp-custom-row .ibp-chip.ibp-vstep { width: 40px; flex: none; font-size: 20px; line-height: 1; }
 .ibp-volnote { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--ibp-mut); }
 .ibp-menu { max-height: calc(100% - 110px); overflow-y: auto; }
+/* v1.4.0 — the Photo slideshow section of the menu. */
+.ibp-photosec { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ibp-line); }
+.ibp-photochips { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+.ibp-photochips .ibp-chip { padding: 0 2px; }
 
 /* -------------------------------- read aloud ------------------------------- */
 .ibp-readmenu { width: min(440px, calc(100% - 20px)); }
@@ -148,6 +159,8 @@
 .ibp-item.ibp-current { background: var(--ibp-card2); box-shadow: inset 3px 0 0 var(--ibp-accent); }
 .ibp-item-ico { flex: none; width: 32px; height: 32px; border-radius: 8px; background: #ffffff10; display: grid; place-items: center; }
 .ibp-item-ico svg { width: 18px; height: 18px; fill: var(--ibp-mut); }
+.ibp-item-thumb { overflow: hidden; background: #0003; }
+.ibp-item-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; image-orientation: from-image; }
 .ibp-item-t { display: flex; flex-direction: column; min-width: 0; flex: 1; }
 .ibp-item-title { font-size: 15px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ibp-item-sub { font-size: 12px; color: var(--ibp-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
