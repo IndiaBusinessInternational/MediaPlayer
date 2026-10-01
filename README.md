@@ -1,4 +1,6 @@
-# IBI Media Player v1.4.1
+# IBI Media Player v1.5.0
+
+**Volume up to 300% (v1.5.0)** — 1 Oct 2026, CEO: "can you increase to 300 % rise in volume ?". 300% is VLC's own ceiling. The slider now runs 0–300% with the 100% notch at one third; the menu's quick buttons are Mute, 100%, 150%, 200% and 300%; ↑ goes to 300%; the note now warns that a 300% boost on headphones can harm hearing. Measured through the player's own chain: a loud speech MP3 (peaks −1.8 dBFS) is +3.9 dB at 200% and +4.6 dB at 300% — the limiter must hold its peaks — while a recording 12 dB quieter is +7.7 dB at 200% and +11.3 dB at 300%. Zero clipped samples at every level.
 
 **An opened file plays at once (v1.4.1)** — 1 Oct 2026, CEO: "When I try to open the IBI Media Player with an audio, it do not open the new audio. only the old audio views as open … I need to close the player first, and only then the new audio opens". The installed app is single-window (launch_handler focus-existing), so Windows hands a new file to the running window; the player only appended it to the playlist and played it only if nothing had played yet, and ignored a file already in the list. Now opening a file — Windows Open with / double-click, the Open and Folder buttons, or a drop — plays it straight away (the standard of VLC and Windows Media Player); a file already in the playlist plays its existing entry instead of being added twice. Host API: `api.open(list)`.
 
@@ -43,7 +45,7 @@ Live: https://player.indiabusinessinternational.online/ (GitHub Pages, public re
 - **Phone-first:** audited at 360 px, 44 px targets, 16 px body, `100dvh` layout, dark by default and light when the device asks.
 
 ## Keyboard
-Space/K play · J/L ±10 s · ←/→ ±5 s · ↑/↓ volume (to 200%) · M mute · F full screen · C captions · < > speed ±0.25 · Alt+, Alt+. speed ±0.05 · , . frame step (paused) · 0–9 seek · Home/End · N/P next/previous · I picture-in-picture · R repeat · Esc close.
+Space/K play · J/L ±10 s · ←/→ ±5 s · ↑/↓ volume (to 300%) · M mute · F full screen · C captions · < > speed ±0.25 · Alt+, Alt+. speed ±0.05 · , . frame step (paused) · 0–9 seek · Home/End · N/P next/previous · I picture-in-picture · R repeat · Esc close.
 
 ## Embedding
 ```html

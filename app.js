@@ -1,4 +1,4 @@
-/* IBI Media Player — the player library. v1.4.1 (1 Oct 2026: an opened file plays at once; v1.4.0 photo slideshow; born v1.0.0 27 Sep 2026)
+/* IBI Media Player — the player library. v1.5.0 (1 Oct 2026: volume to 300 %; v1.4.1 an opened file plays at once; v1.4.0 photo slideshow; born v1.0.0 27 Sep 2026)
  *
  * One file, no dependencies. `IBIPlayer.mount(root, options)` builds a complete audio/video
  * player inside `root` and returns a small API; `index.html` mounts it standalone, and the
@@ -11,7 +11,7 @@
  *     custom slider — with the pitch preserved (switchable);
  *   • seek bar you can drag or tap, with a hover time, buffered ranges and a live position;
  *   • photos (JPG, PNG, WebP, GIF, AVIF, BMP, SVG) as a slideshow in the same playlist, 3–30 s each;
- *   • ±10 s, previous/next, shuffle, repeat off/all/one, volume 0–200 % (boost + limiter), mute, captions (.vtt/.srt),
+ *   • ±10 s, previous/next, shuffle, repeat off/all/one, volume 0–300 % (boost + limiter), mute, captions (.vtt/.srt),
  *     picture-in-picture, full screen, a playlist with drag-and-drop and folder open;
  *   • keyboard: Space/K play, J/L ±10 s, ←/→ ±5 s, ↑/↓ volume, M mute, F full screen,
  *     C captions, < > speed ±0.25, Shift+< > ±0.05, , . frame step (paused), 0–9 seek to %,
@@ -24,15 +24,18 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.4.1";
+  const VERSION = "1.5.0";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   /* v1.3.0 — VOLUME BOOST past 100 %, VLC's standard (CEO, 1 Oct 2026: "I want more audio … increase the
    * volume further more, as per industry standards"). A <video>'s own volume stops at 1.0, so above 100 %
    * the sound runs through Web Audio: element → gain (up to 2.0 = 200 %) → a limiter → speakers. The
    * limiter is in the chain only while boosting, so 0–100 % sounds exactly as before. One AudioContext is
-   * shared by every player on the page (browsers cap how many may exist). */
-  const VOL_MAX = 2, VOL_STEP = 0.05;
+   * shared by every player on the page (browsers cap how many may exist).
+   * v1.5.0 — up to 300 % (CEO, 1 Oct 2026: "can you increase to 300 % rise in volume ?"), VLC's own ceiling.
+   * The 100 % notch sits at a third of the slider; the chain and limiter are unchanged. */
+  const VOL_MAX = 3, VOL_STEP = 0.05;
+  const VOL_PRESETS = [1, 1.5, 2, 3];
   let AUDIO_CTX = null;
   function audioCtx() {
     if (AUDIO_CTX) return AUDIO_CTX;
@@ -176,10 +179,10 @@
           <label class="ibp-check"><input type="checkbox" class="ibp-pitch" checked> Keep the voice's pitch at every speed</label>
           <div class="ibp-volsec">
             <div class="ibp-custom-h"><span>Volume</span><b class="ibp-menuvol-val">100%</b></div>
-            <div class="ibp-volpresets"><button type="button" class="ibp-chip" data-act="mute">Mute</button>${[0.5, 1, 1.5, 2].map((v) => `<button type="button" class="ibp-chip" data-vol="${v}">${v * 100}%</button>`).join("")}</div>
+            <div class="ibp-volpresets"><button type="button" class="ibp-chip" data-act="mute">Mute</button>${VOL_PRESETS.map((v) => `<button type="button" class="ibp-chip" data-vol="${v}">${v * 100}%</button>`).join("")}</div>
             <div class="ibp-custom-row"><button type="button" class="ibp-chip ibp-vstep" data-vstep="-${VOL_STEP}" aria-label="Quieter by 5%">−</button><input type="range" class="ibp-menuvol ibp-volslider" min="0" max="${VOL_MAX}" step="${VOL_STEP}" value="1" aria-label="Volume, up to ${VOL_MAX * 100}%"><button type="button" class="ibp-chip ibp-vstep" data-vstep="${VOL_STEP}" aria-label="Louder by 5%">+</button></div>
-            <div class="ibp-custom-scale"><span>0</span><span>100%</span><span>${VOL_MAX * 100}%</span></div>
-            <div class="ibp-volnote">Above 100% is a boost for quiet recordings. A limiter stops the loud parts from crackling. Turn it down for headphones.</div>
+            <div class="ibp-custom-scale">${Array.from({ length: VOL_MAX + 1 }, (_, i) => `<span>${i ? i * 100 + "%" : "0"}</span>`).join("")}</div>
+            <div class="ibp-volnote">Above 100% is a boost for quiet recordings. A limiter stops the loud parts from crackling. Keep it at 100% or lower on headphones and earphones — a 300% boost can harm your hearing.</div>
           </div>
           <div class="ibp-photosec">
             <div class="ibp-custom-h"><span>Photo slideshow · each photo shows for</span><b class="ibp-photosec-val">5 s</b></div>
@@ -524,6 +527,8 @@
         // anything above 70 % of full scale and can never reach 100 %. Chosen by measurement on 1 Oct 2026
         // (a loud speech MP3, peaks −1.8 dBFS): 125/150/200 % = +2.6/+3.2/+4.0 dB louder, 0 clipped samples,
         // 2 % of the sound in the rounding zone at 200 %. A quiet recording gets the full +6 dB at 200 %.
+        // v1.5.0 re-measured up to 300 %: loud file +3.9/+4.3/+4.6 dB at 200/250/300 % (the limiter holds the peaks,
+        // ~5 % rounded); a recording 12 dB quieter +7.7 dB at 200 % and +11.3 dB at 300 %; 0 clipped samples throughout.
         // Rejected: limiter only (a 150 % boost touched full scale); compress-then-boost (+6 dB jump at 105 %
         // and 10–15 % of the sound saturated); oversample "2x" (its filter overshot past full scale).
         boost.lim.threshold.value = -3; boost.lim.knee.value = 0; boost.lim.ratio.value = 20;
@@ -585,6 +590,7 @@
         const eff = st.muted ? 0 : st.volume;
         r.style.setProperty("--a", (Math.min(eff, 1) / VOL_MAX * 100) + "%");
         r.style.setProperty("--b", (eff / VOL_MAX * 100) + "%");
+        r.style.setProperty("--n", (100 / VOL_MAX) + "%");   // v1.5.0 — the 100 % notch
       });
       volPct.textContent = st.muted ? "Muted" : pct + "%";
       menuVolVal.textContent = st.muted ? "Muted" : pct + "%";

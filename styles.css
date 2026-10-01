@@ -79,15 +79,15 @@
 .ibp-speedbtn { width: auto; min-width: 44px; padding: 0 8px; font-weight: 700; font-size: 14px; }
 .ibp-vol { display: flex; align-items: center; }
 .ibp-volrange { width: 0; opacity: 0; transition: width .2s, opacity .2s; height: 44px; margin: 0; }
-.ibp-vol:hover .ibp-volrange, .ibp-vol:focus-within .ibp-volrange { width: 120px; opacity: 1; }
-/* v1.3.0 — VOLUME 0–200 % (VLC's standard). One track, three zones: accent up to 100 % (the middle), the boost colour
+.ibp-vol:hover .ibp-volrange, .ibp-vol:focus-within .ibp-volrange { width: 150px; opacity: 1; }   /* v1.5.0: 0–300 % needs the room */
+/* v1.3.0 — VOLUME 0–200 % (v1.5.0: 0–300 %, VLC's ceiling). One track, three zones: accent up to 100 % (the notch, --n), the boost colour
  * for the boost, grey for the rest, and a notch at 100 %. --a / --b are set by the script. */
-.ibp-volslider { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; --a: 50%; --b: 50%; }
+.ibp-volslider { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; --a: 33.333%; --b: 33.333%; --n: 33.333%; }
 .ibp-volslider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px;
-  background: linear-gradient(to right, transparent calc(50% - 1px), #000a calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+  background: linear-gradient(to right, transparent calc(var(--n) - 1px), #000a calc(var(--n) - 1px) calc(var(--n) + 1px), transparent calc(var(--n) + 1px)),
               linear-gradient(to right, var(--ibp-accent) 0 var(--a), var(--ibp-boost) var(--a) var(--b), #8888 var(--b) 100%); }
 .ibp-volslider::-moz-range-track { height: 6px; border-radius: 3px;
-  background: linear-gradient(to right, transparent calc(50% - 1px), #000a calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+  background: linear-gradient(to right, transparent calc(var(--n) - 1px), #000a calc(var(--n) - 1px) calc(var(--n) + 1px), transparent calc(var(--n) + 1px)),
               linear-gradient(to right, var(--ibp-accent) 0 var(--a), var(--ibp-boost) var(--a) var(--b), #8888 var(--b) 100%); }
 .ibp-volslider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #0005, 0 1px 3px #0006; }
 .ibp-volslider::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #0005, 0 1px 3px #0006; }
