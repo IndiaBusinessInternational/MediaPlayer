@@ -1,4 +1,4 @@
-/* IBI Media Player — the player library. v1.0.0 (27 Sep 2026)
+/* IBI Media Player — the player library. v1.3.0 (1 Oct 2026; born v1.0.0 27 Sep 2026)
  *
  * One file, no dependencies. `IBIPlayer.mount(root, options)` builds a complete audio/video
  * player inside `root` and returns a small API; `index.html` mounts it standalone, and the
@@ -10,7 +10,7 @@
  *   • speed 0.25× to 4× in 0.05 steps — presets 0.25 0.5 0.75 1 1.25 1.5 1.75 2 plus a
  *     custom slider — with the pitch preserved (switchable);
  *   • seek bar you can drag or tap, with a hover time, buffered ranges and a live position;
- *   • ±10 s, previous/next, shuffle, repeat off/all/one, volume, mute, captions (.vtt/.srt),
+ *   • ±10 s, previous/next, shuffle, repeat off/all/one, volume 0–200 % (boost + limiter), mute, captions (.vtt/.srt),
  *     picture-in-picture, full screen, a playlist with drag-and-drop and folder open;
  *   • keyboard: Space/K play, J/L ±10 s, ←/→ ±5 s, ↑/↓ volume, M mute, F full screen,
  *     C captions, < > speed ±0.25, Shift+< > ±0.05, , . frame step (paused), 0–9 seek to %,
@@ -23,9 +23,27 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.2.3";
+  const VERSION = "1.3.0";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
+  /* v1.3.0 — VOLUME BOOST past 100 %, VLC's standard (CEO, 1 Oct 2026: "I want more audio … increase the
+   * volume further more, as per industry standards"). A <video>'s own volume stops at 1.0, so above 100 %
+   * the sound runs through Web Audio: element → gain (up to 2.0 = 200 %) → a limiter → speakers. The
+   * limiter is in the chain only while boosting, so 0–100 % sounds exactly as before. One AudioContext is
+   * shared by every player on the page (browsers cap how many may exist). */
+  const VOL_MAX = 2, VOL_STEP = 0.05;
+  let AUDIO_CTX = null;
+  function audioCtx() {
+    if (AUDIO_CTX) return AUDIO_CTX;
+    const C = window.AudioContext || window.webkitAudioContext;
+    if (!C) return null;
+    try { AUDIO_CTX = new C(); } catch { AUDIO_CTX = null; }
+    return AUDIO_CTX;
+  }
+  function sameOrigin(u) {
+    if (!u || /^(blob:|data:)/i.test(u)) return true;
+    try { return new URL(u, location.href).origin === location.origin; } catch { return false; }
+  }
   const VIDEO_EXT = ["mp4", "m4v", "webm", "mkv", "mov", "ogv", "3gp", "3g2", "avi", "ts", "mts", "m2ts", "mpg", "mpeg", "wmv", "flv"];
   const AUDIO_EXT = ["mp3", "m4a", "m4b", "aac", "wav", "flac", "ogg", "oga", "opus", "weba", "wma", "aiff", "aif", "amr", "mid", "caf"];
   const CAPTION_EXT = ["vtt", "srt"];
@@ -124,8 +142,8 @@
               <span class="ibp-time"><span class="ibp-cur">0:00</span> / <span class="ibp-dur">0:00</span></span>
             </div>
             <div class="ibp-right">
-              <button type="button" class="ibp-ic ibp-speedbtn" data-act="speed" aria-haspopup="menu" aria-label="Playback speed" title="Speed (&lt; &gt;)"><span class="ibp-speed-label">1×</span></button>
-              <div class="ibp-vol"><button type="button" class="ibp-ic" data-act="mute" aria-label="Mute (M)" title="Mute (M)">${ICON.vol}</button><input type="range" class="ibp-volrange" min="0" max="1" step="0.02" value="1" aria-label="Volume"></div>
+              <button type="button" class="ibp-ic ibp-speedbtn" data-act="speed" aria-haspopup="menu" aria-label="Speed and volume" title="Speed and volume (&lt; &gt; speed, ↑ ↓ volume)"><span class="ibp-speed-label">1×</span></button>
+              <div class="ibp-vol"><button type="button" class="ibp-ic" data-act="mute" aria-label="Mute (M)" title="Mute (M)">${ICON.vol}</button><input type="range" class="ibp-volrange ibp-volslider" min="0" max="${VOL_MAX}" step="${VOL_STEP}" value="1" aria-label="Volume, up to ${VOL_MAX * 100}%"><span class="ibp-volpct" aria-hidden="true">100%</span></div>
               <button type="button" class="ibp-ic ibp-ccbtn" data-act="cc" aria-label="Captions (C)" title="Captions (C)">${ICON.cc}</button>
               <button type="button" class="ibp-ic ibp-pipbtn" data-act="pip" aria-label="Picture in picture (I)" title="Picture in picture (I)">${ICON.pip}</button>
               <button type="button" class="ibp-ic" data-act="shuffle" aria-label="Shuffle" title="Shuffle">${ICON.shuffle}</button>
@@ -137,8 +155,8 @@
             </div>
           </div>
         </div>
-        <div class="ibp-menu ibp-speedmenu" hidden role="menu" aria-label="Playback speed">
-          <div class="ibp-menu-h">Playback speed <button type="button" class="ibp-ic ibp-sm" data-act="closemenu" aria-label="Close">${ICON.close}</button></div>
+        <div class="ibp-menu ibp-speedmenu" hidden role="menu" aria-label="Speed and volume">
+          <div class="ibp-menu-h">Speed and volume <button type="button" class="ibp-ic ibp-sm" data-act="closemenu" aria-label="Close">${ICON.close}</button></div>
           <div class="ibp-presets">${PRESETS.map((r) => `<button type="button" class="ibp-chip" data-rate="${r}">${fmtRate(r)}</button>`).join("")}</div>
           <div class="ibp-custom">
             <div class="ibp-custom-h"><span>Custom</span><b class="ibp-custom-val">1×</b></div>
@@ -146,6 +164,13 @@
             <div class="ibp-custom-scale"><span>0.25×</span><span>1×</span><span>2×</span><span>4×</span></div>
           </div>
           <label class="ibp-check"><input type="checkbox" class="ibp-pitch" checked> Keep the voice's pitch at every speed</label>
+          <div class="ibp-volsec">
+            <div class="ibp-custom-h"><span>Volume</span><b class="ibp-menuvol-val">100%</b></div>
+            <div class="ibp-volpresets"><button type="button" class="ibp-chip" data-act="mute">Mute</button>${[0.5, 1, 1.5, 2].map((v) => `<button type="button" class="ibp-chip" data-vol="${v}">${v * 100}%</button>`).join("")}</div>
+            <div class="ibp-custom-row"><button type="button" class="ibp-chip ibp-vstep" data-vstep="-${VOL_STEP}" aria-label="Quieter by 5%">−</button><input type="range" class="ibp-menuvol ibp-volslider" min="0" max="${VOL_MAX}" step="${VOL_STEP}" value="1" aria-label="Volume, up to ${VOL_MAX * 100}%"><button type="button" class="ibp-chip ibp-vstep" data-vstep="${VOL_STEP}" aria-label="Louder by 5%">+</button></div>
+            <div class="ibp-custom-scale"><span>0</span><span>100%</span><span>${VOL_MAX * 100}%</span></div>
+            <div class="ibp-volnote">Above 100% is a boost for quiet recordings. A limiter stops the loud parts from crackling. Turn it down for headphones.</div>
+          </div>
         </div>
         <div class="ibp-menu ibp-readmenu" hidden role="dialog" aria-label="Read text aloud">
           <div class="ibp-menu-h">Read text aloud <button type="button" class="ibp-ic ibp-sm" data-act="closeread" aria-label="Close">${ICON.close}</button></div>
@@ -184,7 +209,7 @@
     const seek = $(".ibp-seek"), prog = $(".ibp-prog"), buf = $(".ibp-buf"), knob = $(".ibp-knob"), tip = $(".ibp-tip");
     const cur = $(".ibp-cur"), dur = $(".ibp-dur"), playBtns = $$("[data-act=play]"), speedLabel = $(".ibp-speed-label");
     const speedMenu = $(".ibp-speedmenu"), rateRange = $(".ibp-raterange"), customVal = $(".ibp-custom-val"), pitchBox = $(".ibp-pitch");
-    const volRange = $(".ibp-volrange"), muteBtn = $("[data-act=mute]"), fullBtn = $("[data-act=full]"), repeatBtn = $(".ibp-repeatbtn");
+    const volRange = $(".ibp-volrange"), muteBtn = $(".ibp-vol [data-act=mute]"), volPct = $(".ibp-volpct"), menuVol = $(".ibp-menuvol"), menuVolVal = $(".ibp-menuvol-val"), fullBtn = $("[data-act=full]"), repeatBtn = $(".ibp-repeatbtn");
     const ccBtn = $(".ibp-ccbtn"), pipBtn = $(".ibp-pipbtn"), listEl = $(".ibp-list"), itemsEl = $(".ibp-items"), listCount = $(".ibp-list-count"), listEmpty = $(".ibp-list-empty");
     const fileIn = $(".ibp-file"), folderIn = $(".ibp-folder"), ccIn = $(".ibp-ccfile");
 
@@ -287,6 +312,9 @@
       if (it.mime && video.canPlayType(it.mime) === "" && !/matroska|quicktime|x-msvideo|mp2t|ms-wmv|x-flv|mpeg$/.test(it.mime)) {
         showMsg(`This browser cannot play ${it.mime.split(";")[0]} files. Convert the file to MP4 (video) or MP3 (audio) and open it again.`);
       }
+      // v1.3.0 — once the boost chain exists, a file from another site must be fetched with CORS or Web Audio
+      // hands it on as silence. Same-site and local files never need it (and some servers refuse it).
+      if (boost.src && !sameOrigin(src)) video.crossOrigin = "anonymous"; else video.removeAttribute("crossorigin");
       video.src = src;
       video.poster = it.poster || "";
       root.classList.toggle("ibp-audio", it.kind === "audio");
@@ -353,9 +381,101 @@
       LS("ibp:rate", String(r));
     }
     function setRate(r, announce = true) { applyRate(r); if (announce) showFlash(fmtRate(st.rate)); }
-    function setVolume(v) { st.volume = clamp(v, 0, 1); video.volume = st.volume; volRange.value = String(st.volume); LS("ibp:volume", String(st.volume)); if (st.volume > 0 && st.muted) setMuted(false); updateVolIcon(); }
+    /* v1.3.0 — volume 0–200 %. Up to 100 % it is the element's own volume, as before. Above 100 % the element
+     * stays at 1.0 and a Web Audio gain adds the rest, with a limiter after it. The chain is built the first
+     * time a boost is asked for, never before: once an element is routed into Web Audio it stays routed, and
+     * a file from another site that does not allow it (CORS) would then play silent. */
+    const boost = { src: null, gain: null, lim: null, clip: null, limited: false, failed: false };
+    function boostBlocked() {
+      if (boost.gain) return "";
+      if (boost.failed || !(window.AudioContext || window.webkitAudioContext)) return "Volume boost is not available in this browser";
+      if (!sameOrigin(video.currentSrc || video.src)) return "Volume boost works for files on this device or this site";
+      const ua = navigator.userActivation;
+      if (ua && !ua.hasBeenActive) return "Click or tap the player once, then boost";   // a context made before any click stays silent
+      return "";
+    }
+    function boostChain() {
+      if (boost.gain) return true;
+      if (boostBlocked()) return false;
+      const ctx = audioCtx();
+      if (!ctx) { boost.failed = true; return false; }
+      try {
+        boost.src = ctx.createMediaElementSource(video);
+        boost.gain = ctx.createGain();
+        boost.lim = ctx.createDynamicsCompressor();
+        // A limiter (−3 dBFS, 20:1, 1 ms attack) makes speech louder without the peaks clipping. A compressor
+        // still lets the first millisecond of a sharp peak through, so a soft-clip stage after it rounds off
+        // anything above 70 % of full scale and can never reach 100 %. Chosen by measurement on 1 Oct 2026
+        // (a loud speech MP3, peaks −1.8 dBFS): 125/150/200 % = +2.6/+3.2/+4.0 dB louder, 0 clipped samples,
+        // 2 % of the sound in the rounding zone at 200 %. A quiet recording gets the full +6 dB at 200 %.
+        // Rejected: limiter only (a 150 % boost touched full scale); compress-then-boost (+6 dB jump at 105 %
+        // and 10–15 % of the sound saturated); oversample "2x" (its filter overshot past full scale).
+        boost.lim.threshold.value = -3; boost.lim.knee.value = 0; boost.lim.ratio.value = 20;
+        boost.lim.attack.value = 0.001; boost.lim.release.value = 0.1;
+        boost.clip = ctx.createWaveShaper();
+        const n = 4096, curve = new Float32Array(n), K = 0.7;
+        for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1, a = Math.abs(x); curve[i] = a < K ? x : Math.sign(x) * (K + (1 - K) * Math.tanh((a - K) / (1 - K))); }
+        boost.clip.curve = curve; boost.clip.oversample = "none";
+        // Fixed wiring: limiter → soft clip → speakers. Only the gain's output is switched (see applyVolume).
+        boost.lim.connect(boost.clip); boost.clip.connect(ctx.destination);
+        boost.src.connect(boost.gain); boost.gain.connect(ctx.destination);
+      } catch (e) { boost.failed = true; boost.src = boost.gain = boost.lim = boost.clip = null; return false; }
+      if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      return true;
+    }
+    // Returns false when the asked-for boost could not be applied (the caller then falls back to 100 %).
+    function applyVolume() {
+      const v = st.volume, boosting = v > 1;
+      video.volume = Math.min(v, 1);
+      if (boosting && !boostChain()) return false;
+      if (boost.gain) {
+        const ctx = AUDIO_CTX;
+        boost.gain.gain.setTargetAtTime(Math.max(1, v), ctx.currentTime, 0.015);
+        if (boosting !== boost.limited) {   // the limiter sits in the chain only while boosting
+          // Targeted disconnects only: unplug exactly the old route, nothing else wired to these nodes.
+          const cut = (a, b) => { try { a.disconnect(b); } catch {} };
+          if (boosting) { cut(boost.gain, ctx.destination); boost.gain.connect(boost.lim); }
+          else { cut(boost.gain, boost.lim); boost.gain.connect(ctx.destination); }
+          boost.limited = boosting;
+        }
+        if (ctx.state === "suspended") ctx.resume().catch(() => {});
+      }
+      return true;
+    }
+    function volText() { return st.muted ? "Muted" : `Volume ${Math.round(st.volume * 100)}%${st.volume > 1 ? " · boost" : ""}`; }
+    // how: "key" (always announce) · "slider" (announce only on entering/leaving the boost) · "init" (silent)
+    function setVolume(v, how) {
+      const was = st.volume;
+      st.volume = Math.round(clamp(v, 0, VOL_MAX) * 100) / 100;
+      if (!applyVolume()) {
+        const why = boostBlocked();
+        if (how === "init") { video.volume = 1; updateVolIcon(); return; }   // keep the saved boost; retried on the first click/key
+        st.volume = 1; applyVolume(); showFlash(why || "Volume boost is not available"); how = "";
+      }
+      LS("ibp:volume", String(st.volume));
+      if (how !== "init" && st.volume > 0 && st.muted) setMuted(false);
+      updateVolIcon();
+      if (how === "key" || (how === "slider" && (st.volume > 1) !== (was > 1))) showFlash(volText());
+    }
     function setMuted(m) { st.muted = m; video.muted = m; LS("ibp:muted", m ? "1" : "0"); updateVolIcon(); }
-    function updateVolIcon() { muteBtn.innerHTML = st.muted || st.volume === 0 ? ICON.mute : ICON.vol; volRange.style.setProperty("--v", ((st.muted ? 0 : st.volume) * 100) + "%"); }
+    function updateVolIcon() {
+      const pct = Math.round(st.volume * 100), boosting = st.volume > 1;
+      muteBtn.innerHTML = st.muted || st.volume === 0 ? ICON.mute : ICON.vol;
+      muteBtn.title = `${st.muted ? "Unmute" : "Mute"} (M) · volume ${pct}%`;
+      [volRange, menuVol].forEach((r) => {
+        r.value = String(st.volume);
+        r.setAttribute("aria-valuetext", `${pct}%${boosting ? ", boost" : ""}${st.muted ? ", muted" : ""}`);
+        // Fill: accent up to 100 %, orange for the boosted part (the slider spans 0–200 %, so 100 % is the middle).
+        const eff = st.muted ? 0 : st.volume;
+        r.style.setProperty("--a", (Math.min(eff, 1) / VOL_MAX * 100) + "%");
+        r.style.setProperty("--b", (eff / VOL_MAX * 100) + "%");
+      });
+      volPct.textContent = st.muted ? "Muted" : pct + "%";
+      menuVolVal.textContent = st.muted ? "Muted" : pct + "%";
+      root.classList.toggle("ibp-boosting", boosting && !st.muted);
+      $$(".ibp-chip[data-vol]").forEach((b) => b.classList.toggle("ibp-on", !st.muted && Math.abs(Number(b.dataset.vol) - st.volume) < 0.001));
+      const mc = $(".ibp-volpresets [data-act=mute]"); if (mc) mc.classList.toggle("ibp-on", st.muted);
+    }
     function cycleRepeat() { st.repeat = st.repeat === "off" ? "all" : st.repeat === "all" ? "one" : "off"; LS("ibp:repeat", st.repeat); updateRepeat(); showFlash(st.repeat === "off" ? "Repeat off" : st.repeat === "all" ? "Repeat all" : "Repeat one"); }
     function updateRepeat() { repeatBtn.innerHTML = st.repeat === "one" ? ICON.repeat1 : ICON.repeat; repeatBtn.classList.toggle("ibp-on", st.repeat !== "off"); video.loop = st.repeat === "one"; }
     function toggleFull() {
@@ -481,10 +601,17 @@
     video.addEventListener("error", () => {
       const e = video.error; const it = st.items[st.index];
       const why = !e ? "" : e.code === 4 ? "the browser has no decoder for this file's format or codec" : e.code === 3 ? "the file is damaged or its codec is not supported" : e.code === 2 ? "the file could not be read" : "playback was stopped";
+      if (boost.src && video.crossOrigin) { showMsg(`Cannot play ${it ? it.name : "this file"}: its website does not allow it while the volume boost is in use. Reload the page and play it at 100% or less.`); return; }
       showMsg(`Cannot play ${it ? it.name : "this file"}: ${why}. MP4 (H.264 + AAC) and MP3 play everywhere; MKV, MOV and HEVC depend on the codecs installed on this device.`);
     });
     video.addEventListener("ratechange", () => { if (Math.abs(video.playbackRate - st.rate) > 0.001) applyRate(video.playbackRate); });
-    video.addEventListener("volumechange", () => { if (!st.dragging) { st.volume = video.volume; st.muted = video.muted; volRange.value = String(video.volume); updateVolIcon(); } });
+    // v1.3.0 — while boosting, the element sits at 1.0 on purpose; only a change from outside (e.g. the
+    // browser's own controls) below 100 % is adopted.
+    video.addEventListener("volumechange", () => { if (st.dragging) return; st.muted = video.muted; if (!(st.volume > 1 && video.volume === 1)) st.volume = Math.round(video.volume * 100) / 100; updateVolIcon(); });
+    // A boost saved last time but not yet allowed (no click on the page yet) is applied at the first play/click/key.
+    const retryBoost = () => { if (st.volume > 1 && !boost.gain && !boostBlocked()) applyVolume(); if (AUDIO_CTX && AUDIO_CTX.state === "suspended" && boost.gain) AUDIO_CTX.resume().catch(() => {}); };
+    video.addEventListener("play", retryBoost);
+    onDoc("pointerdown", retryBoost); onDoc("keydown", retryBoost);
     video.addEventListener("click", () => togglePlay());
     video.addEventListener("dblclick", () => toggleFull());
     art.addEventListener("click", () => togglePlay());
@@ -508,11 +635,14 @@
     seek.addEventListener("pointercancel", () => { st.dragging = false; root.classList.remove("ibp-scrub"); });
     seek.addEventListener("keydown", (e) => { if (e.key === "ArrowLeft") { seekBy(-5); e.preventDefault(); } if (e.key === "ArrowRight") { seekBy(5); e.preventDefault(); } });
 
-    volRange.addEventListener("input", () => setVolume(Number(volRange.value)));
+    volRange.addEventListener("input", () => setVolume(Number(volRange.value), "slider"));
+    menuVol.addEventListener("input", () => setVolume(Number(menuVol.value), "slider"));
     rateRange.addEventListener("input", () => setRate(Number(rateRange.value), false));
     pitchBox.addEventListener("change", () => { st.pitch = pitchBox.checked; LS("ibp:pitch", st.pitch ? "1" : "0"); applyRate(st.rate); });
     root.addEventListener("click", (e) => {
       const chip = e.target.closest(".ibp-chip[data-rate]"); if (chip) { setRate(Number(chip.dataset.rate)); return; }
+      const vch = e.target.closest(".ibp-chip[data-vol]"); if (vch) { setVolume(Number(vch.dataset.vol), "key"); return; }
+      const vst = e.target.closest(".ibp-vstep"); if (vst) { setVolume(st.volume + Number(vst.dataset.vstep), "key"); return; }
       const step = e.target.closest(".ibp-step"); if (step) { setRate(st.rate + Number(step.dataset.step)); return; }
       const rm = e.target.closest("[data-rm]"); if (rm) { removeItem(Number(rm.dataset.rm)); return; }
       const li = e.target.closest(".ibp-item"); if (li) { load(Number(li.dataset.i), true); return; }
@@ -523,7 +653,10 @@
       else if (act === "fwd") seekBy(10);
       else if (act === "prev") prev();
       else if (act === "next") next();
-      else if (act === "mute") setMuted(!st.muted);
+      // v1.3.0 — on a touch screen there is no hover slider, so the speaker button opens the Volume section
+      // (with Mute in it); with a mouse it mutes, as before.
+      else if (act === "mute" && TOUCH() && !b.closest(".ibp-menu")) { toggleMenu(speedMenu, speedMenu.hidden, menuVol); }
+      else if (act === "mute") { setMuted(!st.muted); showFlash(volText()); }
       else if (act === "speed") toggleMenu(speedMenu);
       else if (act === "closemenu") toggleMenu(speedMenu, false);
       else if (act === "read") { readMenu.hidden = !readMenu.hidden; if (!readMenu.hidden) { speedMenu.hidden = true; loadVoices(); readText.focus({ preventScroll: true }); } }
@@ -544,8 +677,9 @@
       else if (act === "open-cc") ccIn.click();
       else if (act === "clear") { video.pause(); video.removeAttribute("src"); video.load(); st.items = []; st.index = -1; art.hidden = true; empty.hidden = false; renderList(); }
     });
-    function toggleMenu(m, force) { const open = force == null ? m.hidden : force; m.hidden = !open; if (open) { rateRange.focus({ preventScroll: true }); } }
-    onDoc("click", (e) => { if (!speedMenu.hidden && !e.target.closest(".ibp-speedmenu") && !e.target.closest("[data-act=speed]")) speedMenu.hidden = true; });
+    function TOUCH() { return window.matchMedia && window.matchMedia("(hover: none)").matches; }
+    function toggleMenu(m, force, focusEl) { const open = force == null ? m.hidden : force; m.hidden = !open; if (open) { (focusEl || rateRange).focus({ preventScroll: true }); if (focusEl) focusEl.scrollIntoView({ block: "nearest" }); } }
+    onDoc("click", (e) => { if (!speedMenu.hidden && !e.target.closest(".ibp-speedmenu") && !e.target.closest("[data-act=speed]") && !e.target.closest(".ibp-vol")) speedMenu.hidden = true; });
     fileIn.addEventListener("change", () => { addItems(Array.from(fileIn.files).map((f) => ({ file: f }))); fileIn.value = ""; });
     folderIn.addEventListener("change", () => { const fs = Array.from(folderIn.files).filter((f) => kindOf(f.name, f.type)).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true })); addItems(fs.map((f) => ({ file: f }))); folderIn.value = ""; });
     ccIn.addEventListener("change", () => { attachCaptionFile(ccIn.files[0]); ccIn.value = ""; });
@@ -583,9 +717,9 @@
       else if (k === "l" || k === "L") seekBy(10);
       else if (k === "ArrowLeft") seekBy(-5);
       else if (k === "ArrowRight") seekBy(5);
-      else if (k === "ArrowUp") setVolume(st.volume + 0.05);
-      else if (k === "ArrowDown") setVolume(st.volume - 0.05);
-      else if (k === "m" || k === "M") setMuted(!st.muted);
+      else if (k === "ArrowUp") setVolume(st.volume + VOL_STEP, "key");     // v1.3.0 — on past 100 % up to 200 %, like VLC
+      else if (k === "ArrowDown") setVolume(st.volume - VOL_STEP, "key");
+      else if (k === "m" || k === "M") { setMuted(!st.muted); showFlash(volText()); }
       else if (k === "f" || k === "F") toggleFull();
       else if (k === "c" || k === "C") toggleCaptions();
       else if (k === "i" || k === "I") togglePip();
@@ -615,7 +749,7 @@
     onDoc("visibilitychange", () => { if (document.hidden) savePos(); });
 
     // Initial state.
-    setVolume(st.volume); setMuted(st.muted); pitchBox.checked = st.pitch; applyRate(st.rate); updateRepeat();
+    setVolume(st.volume, "init"); setMuted(st.muted); pitchBox.checked = st.pitch; applyRate(st.rate); updateRepeat();
     setListW(savedW(), false); requestAnimationFrame(() => setListW(savedW(), false));   // again once laid out
     if (!document.pictureInPictureEnabled) pipBtn.hidden = true;
     if (o.items && o.items.length) addItems(o.items, { play: o.autoplay });
@@ -628,7 +762,7 @@
     return {
       version: VERSION, video, add: (list, play) => addItems(list, { play: play !== false }), sync: (list) => syncItems(list), play: () => video.play(), pause: () => video.pause(),
       setRate, seekTo, next, prev, get state() { return { ...st }; }, openFiles: () => fileIn.click(),
-      destroy() { savePos(); ac.abort(); video.pause(); video.removeAttribute("src"); try { video.load(); } catch {} LIVE.delete(video); if (synth && synth.speaking) synth.cancel(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; root.classList.remove("ibp"); },
+      destroy() { savePos(); ac.abort(); video.pause(); if (boost.src) { try { boost.src.disconnect(); boost.gain.disconnect(); boost.lim.disconnect(); boost.clip.disconnect(); } catch {} } video.removeAttribute("src"); try { video.load(); } catch {} LIVE.delete(video); if (synth && synth.speaking) synth.cancel(); if (st.blobUrl) URL.revokeObjectURL(st.blobUrl); root.innerHTML = ""; root.classList.remove("ibp"); },
     };
   }
 

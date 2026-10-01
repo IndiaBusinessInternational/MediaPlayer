@@ -71,8 +71,28 @@
 .ibp-fs .ibp-time, .ibp-fs-fallback .ibp-time { color: #ddd; }
 .ibp-speedbtn { width: auto; min-width: 44px; padding: 0 8px; font-weight: 700; font-size: 14px; }
 .ibp-vol { display: flex; align-items: center; }
-.ibp-volrange { width: 0; opacity: 0; transition: width .2s, opacity .2s; accent-color: var(--ibp-accent); height: 44px; margin: 0; }
-.ibp-vol:hover .ibp-volrange, .ibp-vol:focus-within .ibp-volrange { width: 90px; opacity: 1; }
+.ibp-volrange { width: 0; opacity: 0; transition: width .2s, opacity .2s; height: 44px; margin: 0; }
+.ibp-vol:hover .ibp-volrange, .ibp-vol:focus-within .ibp-volrange { width: 120px; opacity: 1; }
+/* v1.3.0 — VOLUME 0–200 % (VLC's standard). One track, three zones: accent up to 100 % (the middle), orange
+ * for the boost, grey for the rest, and a notch at 100 %. --a / --b are set by the script. */
+.ibp-volslider { -webkit-appearance: none; appearance: none; background: transparent; cursor: pointer; --a: 50%; --b: 50%; }
+.ibp-volslider::-webkit-slider-runnable-track { height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, transparent calc(50% - 1px), #000a calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+              linear-gradient(to right, var(--ibp-accent) 0 var(--a), #ff9f1a var(--a) var(--b), #8888 var(--b) 100%); }
+.ibp-volslider::-moz-range-track { height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, transparent calc(50% - 1px), #000a calc(50% - 1px) calc(50% + 1px), transparent calc(50% + 1px)),
+              linear-gradient(to right, var(--ibp-accent) 0 var(--a), #ff9f1a var(--a) var(--b), #8888 var(--b) 100%); }
+.ibp-volslider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 16px; height: 16px; margin-top: -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #0005, 0 1px 3px #0006; }
+.ibp-volslider::-moz-range-thumb { width: 16px; height: 16px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 0 0 1px #0005, 0 1px 3px #0006; }
+.ibp-boosting .ibp-volslider::-webkit-slider-thumb { background: #ff9f1a; }
+.ibp-boosting .ibp-volslider::-moz-range-thumb { background: #ff9f1a; }
+.ibp-volslider:focus-visible { outline: 2px solid var(--ibp-accent); outline-offset: 2px; border-radius: 4px; }
+/* The percentage beside the bar slider: shown while the slider is open, and ALWAYS while boosting, so a
+ * louder-than-normal setting is never hidden. Orange pill + dark text = readable on every theme. */
+.ibp-volpct { display: none; min-width: 44px; padding: 2px 6px; margin-left: 6px; border-radius: 6px; font-size: 13px; font-weight: 700; text-align: center; font-variant-numeric: tabular-nums; color: #ddd; }
+.ibp-vol:hover .ibp-volpct, .ibp-vol:focus-within .ibp-volpct { display: inline-block; }
+.ibp-boosting .ibp-volpct { display: inline-block; background: #ff9f1a; color: #1a0e00; }
+.ibp-boosting .ibp-vol [data-act=mute] { color: #ff9f1a; }
 @media (hover: none) { .ibp-volrange { display: none; } }
 
 /* ------------------------------ speed menu ------------------------------- */
@@ -91,6 +111,16 @@
 .ibp-custom-scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--ibp-mut); padding: 0 48px; }
 .ibp-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 14px; color: var(--ibp-mut); min-height: 32px; }
 .ibp-check input { width: 18px; height: 18px; accent-color: var(--ibp-accent); }
+/* v1.3.0 — the Volume section of the Speed and volume menu (the only volume control on a touch screen). */
+.ibp-volsec { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--ibp-line); }
+.ibp-volsec .ibp-custom-h b { padding: 0 6px; border-radius: 6px; }
+.ibp-boosting .ibp-volsec .ibp-custom-h b { background: #ff9f1a; color: #1a0e00; }
+.ibp-volpresets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 8px; }
+.ibp-volpresets .ibp-chip { padding: 0 2px; }
+.ibp-menuvol { flex: 1; min-width: 0; height: 40px; margin: 0; }
+.ibp-custom-row .ibp-chip.ibp-vstep { width: 40px; flex: none; font-size: 20px; line-height: 1; }
+.ibp-volnote { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--ibp-mut); }
+.ibp-menu { max-height: calc(100% - 110px); overflow-y: auto; }
 
 /* -------------------------------- read aloud ------------------------------- */
 .ibp-readmenu { width: min(440px, calc(100% - 20px)); }

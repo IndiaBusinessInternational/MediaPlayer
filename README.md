@@ -1,4 +1,6 @@
-# IBI Media Player v1.2.3
+# IBI Media Player v1.3.0
+
+**Volume boost up to 200% (v1.3.0)** — 1 Oct 2026, CEO: "I want more audio. add a feature to increase the volume further more, as per industry standards". The volume now goes past 100% up to 200%, the VLC standard. The slider's middle notch is 100%; the part above it fills in orange, and the percentage stays on screen while boosting. ↑ keeps going past 100% in 5% steps. The Speed and volume menu has a Volume section with Mute, 50%, 100%, 150% and 200% buttons, a slider and −/+, and on a touch screen the speaker button opens it. Above 100% the sound runs through Web Audio: a gain stage, a limiter at −3 dBFS and a soft-clip safety stage, so a 2× boost makes speech louder with no clipped samples (measured: a loud speech MP3 gains +3.3 dB at 150% and +4.0 dB at 200%; a quiet recording gets the full +6 dB). 0–100% is unchanged and bypasses all three. The boost works for files on the device and on the same site; it is remembered like the volume.
 
 **The progress dot is always visible (v1.2.3)** — 30 Sep 2026, CEO in Social Flow: "a small dot that is viewable and moves when video is played". The knob on the seek bar was hidden until hover; it now shows at rest at 65 % size and grows on hover or while scrubbing. Hosts whose theme variables are not CSS colours (Tailwind HSL triples) must set `--ibp-accent` etc. on the mount root themselves, or the played strip and the dot are transparent.
 
@@ -35,7 +37,7 @@ Live: https://player.indiabusinessinternational.online/ (GitHub Pages, public re
 - **Phone-first:** audited at 360 px, 44 px targets, 16 px body, `100dvh` layout, dark by default and light when the device asks.
 
 ## Keyboard
-Space/K play · J/L ±10 s · ←/→ ±5 s · ↑/↓ volume · M mute · F full screen · C captions · < > speed ±0.25 · Alt+, Alt+. speed ±0.05 · , . frame step (paused) · 0–9 seek · Home/End · N/P next/previous · I picture-in-picture · R repeat · Esc close.
+Space/K play · J/L ±10 s · ←/→ ±5 s · ↑/↓ volume (to 200%) · M mute · F full screen · C captions · < > speed ±0.25 · Alt+, Alt+. speed ±0.05 · , . frame step (paused) · 0–9 seek · Home/End · N/P next/previous · I picture-in-picture · R repeat · Esc close.
 
 ## Embedding
 ```html
