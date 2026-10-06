@@ -1,4 +1,4 @@
-/* IBI Media Player — the player library. v1.5.0 (1 Oct 2026: volume to 300 %; v1.4.1 an opened file plays at once; v1.4.0 photo slideshow; born v1.0.0 27 Sep 2026)
+/* IBI Media Player — the player library. v1.5.1 (6 Oct 2026: no control-bar flicker; v1.5.0 volume to 300 %; v1.4.1 an opened file plays at once; v1.4.0 photo slideshow; born v1.0.0 27 Sep 2026)
  *
  * One file, no dependencies. `IBIPlayer.mount(root, options)` builds a complete audio/video
  * player inside `root` and returns a small API; `index.html` mounts it standalone, and the
@@ -24,7 +24,7 @@
  */
 (function () {
   "use strict";
-  const VERSION = "1.5.0";
+  const VERSION = "1.5.1";
   const PRESETS = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
   const RATE_MIN = 0.25, RATE_MAX = 4, RATE_STEP = 0.05;
   /* v1.3.0 — VOLUME BOOST past 100 %, VLC's standard (CEO, 1 Oct 2026: "I want more audio … increase the
@@ -880,8 +880,31 @@
     onDoc("keydown", (e) => { if (e.altKey && (e.key === "." || e.key === ">")) { setRate(st.rate + 0.05); e.preventDefault(); } if (e.altKey && (e.key === "," || e.key === "<")) { setRate(st.rate - 0.05); e.preventDefault(); } });
 
     // Controls hide while playing video and the pointer is still.
-    function scheduleHide() { clearTimeout(st.hideTimer); root.classList.remove("ibp-hide"); if (playingNow() && !root.classList.contains("ibp-audio")) st.hideTimer = setTimeout(() => { if (speedMenu.hidden) root.classList.add("ibp-hide"); }, 2600); }
-    ["pointermove", "pointerdown", "keydown", "touchstart"].forEach((ev) => root.addEventListener(ev, scheduleHide, { passive: true }));
+    /* v1.5.1 — NO FLICKER (CEO, 6 Oct 2026, on the Grower's Player page: the control bar kept flickering). With the
+     * cursor resting on the bar, hiding it (opacity, a 6 px slide, pointer-events off) changed what was under the
+     * still cursor; Chrome then dispatched a pointermove that had not moved, which showed the bar, which hid again
+     * 2.6 s later — a loop. The standard every player follows (YouTube, VLC): the controls never hide while the
+     * pointer is ON them, and only a real movement counts. */
+    const controlsEl = $(".ibp-controls");
+    let overControls = false, lastPX = -1, lastPY = -1;
+    if (controlsEl) {
+      controlsEl.addEventListener("pointerenter", () => { overControls = true; clearTimeout(st.hideTimer); root.classList.remove("ibp-hide"); });
+      controlsEl.addEventListener("pointerleave", () => { overControls = false; scheduleHide(); });
+    }
+    // Geometry, not events: a cursor already resting where the bar re-appears gets no pointerenter.
+    function pointerOnControls() {
+      if (overControls) return true;
+      if (!controlsEl || lastPX < 0) return false;
+      const b = controlsEl.getBoundingClientRect();
+      return lastPX >= b.left && lastPX <= b.right && lastPY >= b.top - 8 && lastPY <= b.bottom;
+    }
+    function scheduleHide() { clearTimeout(st.hideTimer); root.classList.remove("ibp-hide"); if (playingNow() && !pointerOnControls() && !root.classList.contains("ibp-audio")) st.hideTimer = setTimeout(() => { if (speedMenu.hidden && !pointerOnControls()) root.classList.add("ibp-hide"); }, 2600); }
+    root.addEventListener("pointerleave", () => { lastPX = lastPY = -1; overControls = false; scheduleHide(); }, { passive: true });   // left the player: it may hide
+    root.addEventListener("pointermove", (e) => {
+      if (e.pointerType === "mouse" && e.clientX === lastPX && e.clientY === lastPY) return;   // a layout change, not a move
+      lastPX = e.clientX; lastPY = e.clientY; scheduleHide();
+    }, { passive: true });
+    ["pointerdown", "keydown", "touchstart"].forEach((ev) => root.addEventListener(ev, scheduleHide, { passive: true }));
     onDoc("fullscreenchange", () => { const on = document.fullscreenElement === root; root.classList.toggle("ibp-fs", on); fullBtn.innerHTML = on ? ICON.unfull : ICON.full; });
     onWin("beforeunload", savePos);
     onDoc("visibilitychange", () => { if (document.hidden) savePos(); });

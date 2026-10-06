@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.0
+# IBI Media Player v1.5.1
+
+**No control-bar flicker (v1.5.1)** — 6 Oct 2026, CEO, on the IBI YouTube Grower's Player page: the control bar kept flickering. While a video played, the controls hid after 2.6 s without movement. With the cursor resting on the bar, hiding it (opacity, a 6 px slide, pointer-events off) changed what was under the still cursor; Chrome then dispatched a pointermove that had not moved, which showed the bar, which hid again 2.6 s later. Now, by the standard every player follows (YouTube, VLC), the controls never hide while the pointer is ON them (judged by the last real pointer position, since a cursor already resting where the bar re-appears gets no pointerenter), and a pointermove at the same position is ignored. Tested on the Grower page with the video playing: cursor on the bar kept it shown for 11 s with 0 flips; cursor on the picture hid it at ~2.6 s; 7 s of same-spot moves caused 0 flips.
 
 **Volume up to 300% (v1.5.0)** — 1 Oct 2026, CEO: "can you increase to 300 % rise in volume ?". 300% is VLC's own ceiling. The slider now runs 0–300% with the 100% notch at one third; the menu's quick buttons are Mute, 100%, 150%, 200% and 300%; ↑ goes to 300%; the note now warns that a 300% boost on headphones can harm hearing. Measured through the player's own chain: a loud speech MP3 (peaks −1.8 dBFS) is +3.9 dB at 200% and +4.6 dB at 300% — the limiter must hold its peaks — while a recording 12 dB quieter is +7.7 dB at 200% and +11.3 dB at 300%. Zero clipped samples at every level.
 
