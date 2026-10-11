@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.1
+# IBI Media Player v1.5.2
+
+**Phones edge to edge (v1.5.2)** — 11 Oct 2026, CEO rule for every web app: on phones the standalone page header uses 8px side padding and the page can never be wider than the screen. Page styles only (page.css); the player library (app.js, styles.css) is unchanged and still reports 1.5.1, so host copies need no refresh.
 
 **No control-bar flicker (v1.5.1)** — 6 Oct 2026, CEO, on the IBI YouTube Grower's Player page: the control bar kept flickering. While a video played, the controls hid after 2.6 s without movement. With the cursor resting on the bar, hiding it (opacity, a 6 px slide, pointer-events off) changed what was under the still cursor; Chrome then dispatched a pointermove that had not moved, which showed the bar, which hid again 2.6 s later. Now, by the standard every player follows (YouTube, VLC), the controls never hide while the pointer is ON them (judged by the last real pointer position, since a cursor already resting where the bar re-appears gets no pointerenter), and a pointermove at the same position is ignored. Tested on the Grower page with the video playing: cursor on the bar kept it shown for 11 s with 0 flips; cursor on the picture hid it at ~2.6 s; 7 s of same-spot moves caused 0 flips.
 

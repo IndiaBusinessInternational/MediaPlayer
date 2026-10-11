@@ -36,3 +36,9 @@ button { font: inherit; color: inherit; }
   .top { padding: 8px 12px; }
   .top .now { display: none; }
 }
+/* v1.5.2 (CEO 11 Oct 2026, every web app: "edge to edge with no padding"): the player already fills the width;
+ * on phones the header uses 8px side padding and the page is never wider than the screen (clip, not hidden). */
+@media (max-width: 640px) {
+  html, body { overflow-x: clip; }
+  .top { padding-left: 8px; padding-right: 8px; gap: 8px; }
+}
