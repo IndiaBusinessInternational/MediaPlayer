@@ -42,3 +42,8 @@ button { font: inherit; color: inherit; }
   html, body { overflow-x: clip; }
   .top { padding-left: 8px; padding-right: 8px; gap: 8px; }
 }
+/* v1.5.4: room for the Share icon (ibi-share.js) on narrow phones. With Install showing at 360px the extra icon
+ * cut the title down to "I…"; the theme switch keeps its knob, title and aria-label but drops the Dark/Light word. */
+@media (max-width: 400px) {
+  .top .theme-lab { display: none; }
+}

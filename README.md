@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.3
+# IBI Media Player v1.5.4
+
+**Room for Share on narrow phones (v1.5.4)** — 27 Oct 2026: at 400px and narrower the theme switch drops its Dark/Light word (knob, tooltip and screen-reader label stay), so the Share icon no longer cuts the title down to one letter when Install is showing. page.css only.
 
 **WhatsApp link preview + Share this app (v1.5.3)** — 27 Oct 2026, Founder: "all web apps should have a sharing link too". The link preview now uses a 1200×630 JPEG banner (`og-banner.jpg`, under 300 KB) with `og:image:type`, so WhatsApp shows the large card; `og-banner.png` stays for anything that still points at it. A round Share button (`ibi-share.js`, IBI Share v1.0) sits at the end of the header and opens a sheet with WhatsApp, Facebook, X, Telegram, Email, Copy link and More apps. Page only; the player library is unchanged (still 1.5.1).
 
