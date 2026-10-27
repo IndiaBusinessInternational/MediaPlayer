@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.2
+# IBI Media Player v1.5.3
+
+**WhatsApp link preview + Share this app (v1.5.3)** — 27 Oct 2026, Founder: "all web apps should have a sharing link too". The link preview now uses a 1200×630 JPEG banner (`og-banner.jpg`, under 300 KB) with `og:image:type`, so WhatsApp shows the large card; `og-banner.png` stays for anything that still points at it. A round Share button (`ibi-share.js`, IBI Share v1.0) sits at the end of the header and opens a sheet with WhatsApp, Facebook, X, Telegram, Email, Copy link and More apps. Page only; the player library is unchanged (still 1.5.1).
 
 **Phones edge to edge (v1.5.2)** — 11 Oct 2026, CEO rule for every web app: on phones the standalone page header uses 8px side padding and the page can never be wider than the screen. Page styles only (page.css); the player library (app.js, styles.css) is unchanged and still reports 1.5.1, so host copies need no refresh.
 
