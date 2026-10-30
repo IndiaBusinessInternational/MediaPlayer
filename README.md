@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.5
+# IBI Media Player v1.5.6
+
+**No-picture message corrected (v1.5.6)** — 30 Oct 2026, Founder: "I was told by you earlier to make Graphics acceleration off. Now you are telling to ON it. contradictory". Graphics acceleration is off on purpose on the IBI laptop (the Grower needs the graphics card), so the message no longer says to switch it on: it says to open the file in the Windows Media Player or Photos app, and to set the phone camera to H.264 for new recordings. app.js only.
 
 **No more silent black screen (v1.5.5)** — 30 Oct 2026, CEO: a Pixel 10a video played its sound over a black screen. Phones record HEVC (H.265); Chrome and Edge decode HEVC only with "Use graphics acceleration when available" on, and without it they drop the picture with no error. The player now reads the codec from the file (the `stsd` entry in `moov`), warns before playing when the browser says it cannot decode it, and checks `videoWidth` after loading: with no picture it shows the title card ("Sound only"), keeps the sound playing, and explains the fix (Chrome/Edge Settings → System → graphics acceleration → Relaunch). The message has a ✕ and Esc closes it. Library change (app.js + styles.css report 1.5.5) — host copies need a refresh.
 
