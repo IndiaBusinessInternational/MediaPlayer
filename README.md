@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.6
+# IBI Media Player v1.6.0
+
+**H.264 and H.265 both play — via Microsoft Edge (v1.6.0)** — 30 Oct 2026, Founder: "Ensure we play both H264 and also H265" → "Option 1: Edge". Chrome's graphics acceleration stays off on the IBI laptop (the Grower needs the graphics card), and without it Chrome has no HEVC decoder. Edge has its own graphics setting (on) and uses the Windows HEVC Video Extension, so it plays both. On Windows outside Edge, an HEVC video's no-picture message now carries an **Open in Microsoft Edge** button (`microsoft-edge:` link to the player; a `?src=` item is passed along). Only hosts that pass the new `edgeUrl` option get the button (the standalone page passes its own URL). Install the player as an app from Edge and make it the .mp4 app to double-click phone videos.
 
 **No-picture message corrected (v1.5.6)** — 30 Oct 2026, Founder: "I was told by you earlier to make Graphics acceleration off. Now you are telling to ON it. contradictory". Graphics acceleration is off on purpose on the IBI laptop (the Grower needs the graphics card), so the message no longer says to switch it on: it says to open the file in the Windows Media Player or Photos app, and to set the phone camera to H.264 for new recordings. app.js only.
 
