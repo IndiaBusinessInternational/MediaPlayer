@@ -1,4 +1,6 @@
-# IBI Media Player v1.5.4
+# IBI Media Player v1.5.5
+
+**No more silent black screen (v1.5.5)** — 30 Oct 2026, CEO: a Pixel 10a video played its sound over a black screen. Phones record HEVC (H.265); Chrome and Edge decode HEVC only with "Use graphics acceleration when available" on, and without it they drop the picture with no error. The player now reads the codec from the file (the `stsd` entry in `moov`), warns before playing when the browser says it cannot decode it, and checks `videoWidth` after loading: with no picture it shows the title card ("Sound only"), keeps the sound playing, and explains the fix (Chrome/Edge Settings → System → graphics acceleration → Relaunch). The message has a ✕ and Esc closes it. Library change (app.js + styles.css report 1.5.5) — host copies need a refresh.
 
 **Room for Share on narrow phones (v1.5.4)** — 27 Oct 2026: at 400px and narrower the theme switch drops its Dark/Light word (knob, tooltip and screen-reader label stay), so the Share icon no longer cuts the title down to one letter when Install is showing. page.css only.
 
